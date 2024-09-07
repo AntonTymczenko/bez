@@ -1,28 +1,33 @@
 import './global.css'
 
 import { Metadata } from 'next'
-import i18n, { type Locale } from '../i18n'
+import i18n from '../i18n'
+import LocaleSwitcher from './components/locale-switcher'
+import type { ChildrenProps, LocaleProps } from './propTypes'
 
 export async function generateStaticParams() {
     return i18n.locales.map((locale) => ({ lang: locale }))
 }
 
-export default function Root({
-    children,
-    params,
-}: {
-    children: React.ReactNode
-    params: { lang: Locale }
-}) {
+// TODO: put link to the main page
+export default function Root(props: ChildrenProps & LocaleProps) {
+    const {
+        children,
+        params: { lang },
+    } = props
+
     return (
-        <html lang={params.lang}>
-            <body>{children}</body>
+        <html lang={lang}>
+            <body>
+                <LocaleSwitcher current={lang} />
+                {children}
+            </body>
         </html>
     )
 }
 
-export async function generateMetadata(props): Promise<Metadata> {
-    const { heading } = i18n.getContent(props.params.lang)
+export async function generateMetadata(props: LocaleProps): Promise<Metadata> {
+    const { heading } = i18n.getDictionary(props.params.lang)
 
     return {
         title: heading,

@@ -30,3 +30,10 @@ a {
     text-decoration: none;
     color: inherit;
 }
+
+.locale-switcher {
+    position: fixed;
+    top: 1rem;
+    right: 2rem;
+    z-index: 10;
+}

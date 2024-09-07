@@ -1,15 +1,11 @@
-import i18n, { type Locale } from '../i18n'
-import LocaleSwitcher from './components/locale-switcher'
+import i18n from '../i18n'
+import { LocaleProps } from './propTypes'
 
-type PageWithLocaleProps = {
-    params: { lang?: Locale }
-}
-
-export default function PageWithLocale(props: PageWithLocaleProps) {
+export default function PageWithLocale(props: LocaleProps) {
     const locale = props.params.lang ?? i18n.defaultLocale
-    const content = i18n.getContent(locale)
+    const dictionary = i18n.getDictionary(locale)
 
-    const { heading, message } = content
+    const { heading, message } = dictionary
 
     return (
         <>
@@ -18,7 +14,6 @@ export default function PageWithLocale(props: PageWithLocaleProps) {
                     <a href="/">{heading}</a>
                 </h1>
                 <p>{message}</p>
-                <LocaleSwitcher current={locale} />
             </div>
         </>
     )
