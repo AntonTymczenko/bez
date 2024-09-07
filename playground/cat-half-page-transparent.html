@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transparent Text on Left Half</title>
+    <style>
+        /* Background settings */
+        body {
+            margin: 0;
+            height: 100vh;
+            background-image: url('https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fpixnio.com%2Ffree-images%2F2017%2F09%2F26%2F2017-09-26-07-22-55.jpg&f=1&nofb=1&ipt=48d401687cef23d97bcd7a0c3ab42b58152632a961b4d6cc5af09c971b91388e&ipo=images');
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* White block on left half with transparent text */
+        .text-block {
+            width: 50vw; /* Half of the viewport width */
+            height: 100vh; /* Full height */
+            background-color: rgba(255,255,255,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .text {
+            font-size: 2em;
+            font-weight: bold;
+            background-image: url('https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fpixnio.com%2Ffree-images%2F2017%2F09%2F26%2F2017-09-26-07-22-55.jpg&f=1&nofb=1&ipt=48d401687cef23d97bcd7a0c3ab42b58152632a961b4d6cc5af09c971b91388e&ipo=images');
+            background-size: cover;
+            background-position: center; /* Align the background image */
+            -webkit-background-clip: text;
+            background-clip: text;
+            position: absolute; /* Position relative to the parent */
+            top: 0;
+            left: 0;
+            width: 100vw; /* Full width to cover the text */
+            height: 100vh; /* Full height to cover the text */
+        }
+        .text h1 {
+          color: black;
+        }
+        .text p {
+            width: 50vw;
+            color: transparent;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="text-block">
+        <div class="text">
+          <h1>CAT</h1>
+          <p>Quisque sollicitudin quam id dolor gravida, non efficitur magna sodales. Phasellus ante risus, venenatis eu sodales volutpat, tempus vitae turpis. Cras vitae diam commodo augue ultrices semper et vel odio. Aenean efficitur dictum quam et varius. Nullam justo nunc, congue ac elit bibendum, gravida mollis eros. Sed vestibulum at sapien at maximus. Aenean commodo risus arcu, ut luctus orci volutpat in. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam gravida tortor vel elit rutrum dictum. Aliquam interdum condimentum viverra. Curabitur vel sapien felis. Etiam vitae ultricies lorem. Vivamus at laoreet ipsum. In nisi justo, malesuada eget ornare vitae, pellentesque at ipsum. Integer et risus odio. </p>
+        </div>
+    </div>
+</body>
+</html>
