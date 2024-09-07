@@ -1,25 +1,21 @@
-type LANG_CODES = "pl" | "ua";
-type PARTS = "heading" | "message";
+import { type Locale, Dictionary } from '../app/i18n'
 
-type CONTENT_LOCALIZED = Record<PARTS, string>;
-
-const CONTENT: Record<LANG_CODES, CONTENT_LOCALIZED> = {
-  pl: {
-    heading: "Bez Cukru, bez Glutenu",
-    message:
-      "Strona jest w budowie. Prosimy o cierpliwość, blog pojawi się wkrótce!",
-  },
-  ua: {
-    heading: "Без Цукру, без Глютену",
-    message:
-      "Сайт знаходиться в розробці. Будь ласка, очікуйте на блог найближчим часом!",
-  },
-};
-
-export const defaultCode = "pl";
-
-export const getContent = (languageCode?: string): CONTENT_LOCALIZED => {
-  const data = CONTENT[languageCode ?? defaultCode] ?? CONTENT[defaultCode];
-
-  return data;
-};
+export const CONTENT: Record<Locale, Dictionary> = {
+    pl: {
+        heading: 'Bez Cukru, bez Glutenu',
+        message:
+            'Strona jest w budowie. Prosimy o cierpliwość, blog pojawi się wkrótce!',
+        flag: '🇵🇱',
+    },
+    uk: {
+        heading: 'Без Цукру, без Глютену',
+        message:
+            'Сайт знаходиться в розробці. Будь ласка, очікуйте на блог найближчим часом!',
+        flag: '🇺🇦',
+    },
+    en: {
+        heading: 'No Sugar, no Gluten',
+        message: 'Site is under construction. The blog will be ready soon!',
+        flag: '🇺🇲',
+    },
+}

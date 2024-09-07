@@ -1,26 +1,31 @@
 {
-  "name": "bez",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "prestart": "npm run build",
-    "start": "next start -p 80",
-    "lint": "next lint"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "next": "^14.2.7",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
-  },
-  "devDependencies": {
-    "@types/node": "^22.5.2",
-    "@types/react": "^18.3.5",
-    "typescript": "^5.5.4"
-  }
+    "name": "bez",
+    "version": "1.0.0",
+    "main": "index.js",
+    "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "prestart": "npm run build",
+        "start": "next start -p 80",
+        "lint": "next lint",
+        "prettify": "npx prettier . --write"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "dependencies": {
+        "@formatjs/intl-localematcher": "^0.5.4",
+        "negotiator": "^0.6.3",
+        "next": "^14.2.7",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1"
+    },
+    "devDependencies": {
+        "@types/negotiator": "^0.6.3",
+        "@types/node": "^22.5.2",
+        "@types/react": "^18.3.5",
+        "@types/react-dom": "^18.3.0",
+        "typescript": "^5.5.4"
+    }
 }
