@@ -1,4 +1,3 @@
-import pick from 'lodash.pick'
 import Negotiator, { Headers } from 'negotiator'
 import { match } from '@formatjs/intl-localematcher'
 
@@ -12,6 +11,14 @@ export type Locale = keyof typeof supportedLocales
 export type PageContentKey = 'heading' | 'body'
 export type PageContent = Record<PageContentKey, string>
 
+function pick(object, ...paths) {
+    return object == null
+        ? {}
+        : Object.fromEntries(
+              Object.entries(object).filter(([key]) => paths.includes(key))
+          )
+}
+
 class i18n {
     locales: Locale[]
     flags: Partial<typeof supportedLocales>
@@ -23,7 +30,7 @@ class i18n {
         )
 
         this.locales = Array.from<Locale>(new Set<Locale>(verifiedLocales))
-        this.flags = pick(supportedLocales, verifiedLocales)
+        this.flags = pick(supportedLocales, ...verifiedLocales)
         this.defaultLocale = this.locales[0]
     }
 
