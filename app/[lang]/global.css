@@ -37,3 +37,10 @@ a {
     right: 2rem;
     z-index: 10;
 }
+
+.header-navigation {
+    position: fixed;
+    top: 1rem;
+    left: 2rem;
+    z-index: 10;
+}

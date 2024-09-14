@@ -1,30 +1,48 @@
-import { CONTENT, type DictionaryKey } from '../src/content'
+import pick from 'lodash.pick'
+import Negotiator, { Headers } from 'negotiator'
+import { match } from '@formatjs/intl-localematcher'
 
-export type Locale = 'pl' | 'uk' | 'en'
-export type Dictionary = Record<DictionaryKey, string>
-
-const locales = Object.keys(CONTENT) as Locale[]
-
-const getFlag = (languageCode: Locale): Dictionary['flag'] => {
-    return CONTENT[languageCode].flag
-}
-
-const getDictionary = (languageCode?: string): Dictionary => {
-    const basic = languageCode?.substring(0, 2)
-    const recognizedCode = basic && locales.find((c) => c.match(basic))
-
-    const code = recognizedCode ?? i18n.defaultLocale
-
-    const data = CONTENT[code]
-
-    return data
-}
-
-const i18n = {
-    defaultLocale: 'pl',
-    locales,
-    getDictionary,
-    getFlag,
+const supportedLocales = {
+    pl: '🇵🇱',
+    uk: '🇺🇦',
+    en: '🇺🇲',
 } as const
 
-export default i18n
+export type Locale = keyof typeof supportedLocales
+export type PageContentKey = 'heading' | 'body'
+export type PageContent = Record<PageContentKey, string>
+
+class i18n {
+    locales: Locale[]
+    flags: Partial<typeof supportedLocales>
+    defaultLocale: Locale
+
+    constructor(config: Locale[]) {
+        const verifiedLocales = config.filter((l) =>
+            Object.keys(supportedLocales).includes(l)
+        )
+
+        this.locales = Array.from<Locale>(new Set<Locale>(verifiedLocales))
+        this.flags = pick(supportedLocales, verifiedLocales)
+        this.defaultLocale = this.locales[0]
+    }
+
+    getFlag(languageCode: Locale) {
+        return this.flags[languageCode] ?? '🏳️'
+    }
+
+    getLocale(headers: Headers): Locale {
+        const locales = this.locales
+
+        // Use negotiator and intl-localematcher to get best locale
+        const languages = new Negotiator({ headers }).languages(locales)
+        const locale = match(languages, locales, this.defaultLocale) as Locale
+
+        return locale
+    }
+}
+
+// TODO: read from environment
+const instance = new i18n(['pl', 'uk', 'en'])
+
+export default instance

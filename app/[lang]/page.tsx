@@ -1,20 +1,23 @@
-import i18n from '../i18n'
+import db from '../../src/db'
 import { LocaleProps } from './propTypes'
 
-export default function PageWithLocale(props: LocaleProps) {
-    const locale = props.params.lang ?? i18n.defaultLocale
-    const dictionary = i18n.getDictionary(locale)
+export default async function PageWithLocale(props: LocaleProps) {
+    const { lang } = props.params
+    const content = await db.getPage('/', lang)
 
-    const { heading, message } = dictionary
+    const { heading, body } = content ?? {}
 
     return (
-        <>
+        content && (
             <div className="container">
                 <h1>
                     <a href="/">{heading}</a>
                 </h1>
-                <p>{message}</p>
+                <p>{body}</p>
+                <p>
+                    <a href="/recipe/test">recipe test</a>
+                </p>
             </div>
-        </>
+        )
     )
 }
