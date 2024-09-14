@@ -1,0 +1,4 @@
+# Contact information for reporting vulnerabilities
+Contact: mailto:a.tymczenko@gmail.com
+Encryption: https://bez-cukru-bez-glutenu.com/.well-known/pgp-public.asc
+Expires: 2026-08-15T08:32:23Z
