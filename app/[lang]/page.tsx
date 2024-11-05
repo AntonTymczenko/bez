@@ -14,9 +14,6 @@ export default async function PageWithLocale(props: LocaleProps) {
                     <a href="/">{heading}</a>
                 </h1>
                 <p>{body}</p>
-                <p>
-                    <a href="/recipe/test">recipe test</a>
-                </p>
             </div>
         )
     )
