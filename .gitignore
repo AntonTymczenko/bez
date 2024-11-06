@@ -1,3 +1,5 @@
 node_modules
 .next
 sqlite-data
+content/*
+!content/.gitkeep
