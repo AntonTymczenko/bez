@@ -3,3 +3,4 @@ node_modules
 sqlite-data
 content/*
 !content/.gitkeep
+!content/recipe.md.example

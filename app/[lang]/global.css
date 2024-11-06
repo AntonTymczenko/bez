@@ -1,15 +1,18 @@
-body,
-html {
+body {
     margin: 0;
     padding: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #ff6f91, #d783ff);
+    color: white;
+}
+
+.homepage {
     width: 100%;
-    height: 100%;
+    height: 100vh;
     font-family: Arial, sans-serif;
     display: flex;
     justify-content: center;
     align-items: center;
-    background: linear-gradient(135deg, #ff6f91, #d783ff);
-    color: white;
     text-align: center;
 }
 
@@ -17,30 +20,34 @@ html {
     padding: 20px;
 }
 
-h1 {
+.homepage h1 {
     font-size: 3rem;
     margin-bottom: 20px;
 }
 
-p {
+.homepage p {
     font-size: 1.5rem;
 }
 
-a {
+.homepage a ,
+.locale-switcher a ,
+.header-navigation a ,
+h1 a {
     text-decoration: none;
     color: inherit;
 }
 
-.locale-switcher {
-    position: fixed;
-    top: 1rem;
-    right: 2rem;
-    z-index: 10;
-}
-
+.locale-switcher,
 .header-navigation {
     position: fixed;
     top: 1rem;
-    left: 2rem;
     z-index: 10;
+}
+
+.locale-switcher {
+    right: 2rem;
+}
+
+.header-navigation {
+    left: 2rem;
 }

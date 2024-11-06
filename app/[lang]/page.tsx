@@ -9,11 +9,13 @@ export default async function PageWithLocale(props: LocaleProps) {
 
     return (
         content && (
-            <div className="container">
-                <h1>
-                    <a href="/">{heading}</a>
-                </h1>
-                <p>{body}</p>
+            <div className="homepage">
+                <div className="container">
+                    <h1>
+                        <a href="/">{heading}</a>
+                    </h1>
+                    <p>{body}</p>
+                </div>
             </div>
         )
     )

@@ -1,6 +1,7 @@
 import Negotiator, { Headers } from 'negotiator'
 import { match } from '@formatjs/intl-localematcher'
 
+// TODO: read from environment
 const supportedLocales = {
     pl: '🇵🇱',
     uk: '🇺🇦',
@@ -47,9 +48,15 @@ class i18n {
 
         return locale
     }
+
+    validateLocale(candidate: string): Locale | undefined {
+        // @ts-expect-error
+        const isValid = this.locales.includes(candidate)
+
+        return isValid ? (candidate as Locale) : undefined
+    }
 }
 
-// TODO: read from environment
-const instance = new i18n(['pl', 'uk', 'en'])
+const instance = new i18n(Object.keys(supportedLocales) as Locale[])
 
 export default instance

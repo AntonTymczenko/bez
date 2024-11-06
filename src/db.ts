@@ -54,7 +54,7 @@ class Database {
                 )
             }
         },
-        log(method: string, obj?: Record<string, any>) {
+        info(method: string, obj?: Record<string, any>) {
             console.log(
                 ` DB.${method}`,
                 obj ? JSON.stringify(obj, null, 2).split('\n').join('') : ''
@@ -79,6 +79,15 @@ class Database {
             locale TEXT NOT NULL,
             heading TEXT NOT NULL,
             body TEXT NOT NULL
+        )`)
+
+        await db.exec(`CREATE TABLE IF NOT EXISTS images (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            page_id INTEGER NOT NULL,
+            alt TEXT NOT NULL,
+            permalink TEXT NOT NULL,
+            path TEXT NOT NULL,
+            FOREIGN KEY (page_id) REFERENCES pages (id) ON DELETE CASCADE
         )`)
 
         await db.exec(`CREATE TABLE IF NOT EXISTS migrations (
@@ -111,7 +120,7 @@ class Database {
         const existingHash = await this._db.run(query)
 
         if (existingHash?.[0]) {
-            this.logger.verbose(
+            this.logger.info(
                 `seed. No need to seed. Done at: ${existingHash?.[0].date}\n${existingHash?.[0].hash}`
             )
             return
@@ -237,7 +246,7 @@ class Database {
         path: string,
         languageCode: Locale
     ): Promise<PageContent | null> {
-        this.logger.log('getPage', { path, languageCode })
+        this.logger.info('getPage', { path, languageCode })
         const page = await this.getOne({
             collection: 'pages',
             query: `path = "${path}" AND locale = "${languageCode}"`,
