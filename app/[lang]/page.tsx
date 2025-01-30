@@ -21,7 +21,7 @@ export default async function PageWithLocale(props: LocaleProps) {
                     {recipes.length && (
                         <ul>
                             {recipes.map((recipe) => (
-                                <li>
+                                <li key={recipe.url}>
                                     <a href={recipe.url}>{recipe.heading}</a>
                                 </li>
                             ))}
