@@ -6,6 +6,7 @@
         "build": "next build",
         "start": "next start -p 80",
         "page": "ts-node ./src/import-page-from-md.ts",
+        "backup": "cp ./sqlite-data/database.db ./sqlite-data/database-$(date +%F_%H-%M-%S).db",
         "lint": "next lint",
         "prettify": "npx prettier . --write"
     },
