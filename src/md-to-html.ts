@@ -1,7 +1,6 @@
 import createDOMPurify from 'dompurify'
 import { JSDOM } from 'jsdom'
 import { marked } from 'marked'
-import path from 'path'
 import fs from 'fs'
 import { slugify } from 'transliteration'
 
@@ -12,16 +11,8 @@ export const readTextFile = (fullPath: string): string => {
     return fs.readFileSync(fullPath, 'utf-8')
 }
 
-const mdDefault: string = readTextFile(
-    path.resolve(__dirname, '../content/recipe.md.example')
-)
-
-// TODO: get fallback title equal to home page title
+// TODO: get fallback title equal to home page's title (`/` page URL)
 const fallbackTitle = 'Bez cukru, bez glutenu'
-
-function extractTitle(html: string): string {
-    return html.match(/<h1>(.+)<\/h1>/m)?.[1] ?? fallbackTitle
-}
 
 export function recognizeHeading(md: string): string {
     const h1 = md.match(/^#\s+(.*)\n/m)
@@ -40,23 +31,20 @@ export function getPermalinkFromFilename(filename: string): string {
         .replace(/^-|-$/g, '') // Trim leading and trailing dashes
 }
 
+/**
+ *
+ * @param markdown
+ * @returns HTML body without H1
+ */
 export default async function markdownToHtml(
-    source: string = mdDefault
-): Promise<{
-    heading: string
-    body: string
-}> {
+    markdown: string = ''
+): Promise<string> {
     const html = await marked.parse(
-        source.replace(/^[\u200B\u200C\u200D\u200E\u200F\uFEFF]/, '')
+        markdown.replace(/^[\u200B\u200C\u200D\u200E\u200F\uFEFF]/, '')
     )
     const clean = DOMPurify.sanitize(html)
 
-    // const heading = extractTitle(clean)
-    const heading = recognizeHeading(source)
     const body = clean.replace(/<h1>.*<\/h1>\n/m, '')
 
-    return {
-        heading,
-        body,
-    }
+    return body
 }

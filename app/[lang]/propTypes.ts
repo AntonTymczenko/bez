@@ -1,4 +1,4 @@
-import { Locale } from '../i18n'
+import { Locale } from '../../src/types'
 
 export type LocaleProps = {
     params: { lang: Locale }

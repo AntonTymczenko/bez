@@ -3,7 +3,8 @@
 import React from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import i18n, { type Locale } from '../../i18n'
+import i18n from '../../i18n'
+import { type Locale } from '../../../src/types'
 
 type LocaleSwitcherProps = {
     current: Locale

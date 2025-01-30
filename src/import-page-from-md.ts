@@ -6,9 +6,10 @@ import {
     readTextFile,
     recognizeHeading,
 } from './md-to-html'
-import i18n, { type Locale } from '../app/i18n'
-
-const contentDir = '../content'
+import i18n from '../app/i18n'
+import type { ContentType, Locale } from './types'
+import { filePaths } from './constants'
+import db from './db'
 
 type File = {
     path: string
@@ -18,9 +19,22 @@ type File = {
 }
 type MdFile = File & { language: Locale }
 
+type SelectedItem = {
+    importAs: 'recipe' | 'page'
+    language: Locale
+    heading: string
+    permalink: string
+    pageAlreadyStored: boolean
+    markdown: string
+    origin: File['path']
+    imgPermalink: string | null
+    imgImportFromPath: string | null
+    imageAlreadyStored: boolean
+}
+
 const prompt = inquirer.createPromptModule()
 
-// Function to get all markdown and image files
+// Function to get all markdown and image files from a folder
 const getFiles = (dir: string) => {
     const folder = path.resolve(__dirname, dir)
     const files: string[] = fs.readdirSync(folder)
@@ -33,7 +47,7 @@ const getFiles = (dir: string) => {
         if (fs.statSync(filePath).isFile()) {
             let whereToPush: File[] | null = null
 
-            if (file.match(/\.md$/i)) {
+            if (file.match(/(?<!\.?example)\.md$/i)) {
                 whereToPush = mdFiles
             } else if (file.match(/\.jpe?g$/i)) {
                 whereToPush = jpgFiles
@@ -98,8 +112,9 @@ const findImageFileForMd = (
 
 async function confirm(
     mdFile: MdFile,
+    importAs: 'page' | 'recipe',
     imageFile: Omit<File, 'language'> | null
-): Promise<any> {
+): Promise<SelectedItem | null> {
     // TODO: type of return
     if (!imageFile) {
         console.log(`No matching image found for ${mdFile.name}`)
@@ -108,29 +123,18 @@ async function confirm(
     const markdownContent = readTextFile(mdFile.path)
     const heading = recognizeHeading(markdownContent)
 
-    const importOptions = [
-        {
-            name: 'Blog page',
-            prefix: '',
-        },
-        {
-            name: 'Recipe',
-            prefix: 'recipe',
-        },
-    ]
-    const { importAs } = await prompt([
-        {
-            type: 'list',
-            name: 'importAs',
-            message: 'How to import this page?',
-            choices: importOptions.map((option) => ({
-                name: option.name,
-                value: option,
-            })),
-        },
-    ])
+    const importAsPrefix = {
+        page: '',
+        recipe: 'recipe',
+    }[importAs]
 
-    const permalink = path.join('/', importAs.prefix, mdFile.permalink)
+    // special treatment for home page
+    const permaPath =
+        importAs === 'page' && mdFile.permalink == 'home'
+            ? ''
+            : mdFile.permalink
+
+    const permalink = path.join('/', importAsPrefix, permaPath)
     const imgExtension = imageFile ? path.extname(imageFile.path) : null
     const imgPermalink = imageFile
         ? `${imageFile.permalink}${imgExtension}`
@@ -140,13 +144,14 @@ async function confirm(
     const pageAlreadyStored = false
     const imageAlreadyStored = false
 
-    const result = {
-        importAs: importAs.name,
+    const result: SelectedItem = {
+        importAs,
         language: mdFile.language ?? null,
         heading,
         permalink,
         pageAlreadyStored,
         markdown: markdownContent,
+        origin: mdFile.path,
         // TODO: img alt will be gotten from the page's heading
         imgPermalink,
         imgImportFromPath: imageFile?.path ?? null,
@@ -177,34 +182,111 @@ async function confirm(
     return confirmation.confirmationValue === true ? result : null
 }
 
-// Main function to run the script
-const main = async () => {
-    console.log('import page from MD script start')
-    const { mdFiles, jpgFiles } = getFiles(contentDir)
+async function selectPageType(
+    pageType: 'page' | 'recipe'
+): Promise<SelectedItem[]> {
+    const selected: SelectedItem[] = []
+    const dir = pageType === 'page' ? filePaths.pagesDir : filePaths.recipesDir
 
-    if (mdFiles.length === 0) {
-        console.log('No markdown files found in the content folder.')
-        return
+    const { mdFiles, jpgFiles } = getFiles(dir)
+
+    let unprocessedCount = mdFiles.length
+    if (unprocessedCount === 0) {
+        console.log(
+            `No markdown files found in the content "${pageType}" folder ${dir}`
+        )
+        return []
     }
 
-    // Prompt the user to select a markdown file
-    const answer = await prompt([
-        {
-            type: 'list',
-            name: 'selectedMdFile',
-            message: 'Select a markdown file:',
-            choices: mdFiles.map((file) => ({ name: file.name, value: file })),
-        },
-    ])
+    let done = false
 
-    const selectedMdFile = answer.selectedMdFile as MdFile
+    console.log(mdFiles)
+    while (unprocessedCount && !done) {
+        // Prompt the user to select a markdown file
+        const answer = await prompt([
+            {
+                type: 'list',
+                name: 'selectedMdFile',
+                message: 'Select a markdown file:',
+                choices: mdFiles.map((file) => ({
+                    name: file.name,
+                    value: file,
+                })),
+            },
+        ])
 
-    // Find the matching image file
-    const imageFile = findImageFileForMd(selectedMdFile.path, jpgFiles)
+        const selectedMdFile = answer.selectedMdFile as MdFile
 
-    const result = await confirm(selectedMdFile, imageFile)
-    console.log(result ? 'Confirmed' : 'Cancelled')
+        // Find the matching image file
+        const imageFile = findImageFileForMd(selectedMdFile.path, jpgFiles)
+
+        const result = await confirm(selectedMdFile, pageType, imageFile)
+        if (result) {
+            selected.push(result)
+            unprocessedCount--
+
+            const indexOfSelected = mdFiles.findIndex(
+                (file) => file.path === result.origin
+            )
+            mdFiles.splice(indexOfSelected, 1)
+        }
+
+        const { selectMore } = await prompt([
+            {
+                type: 'input',
+                name: 'selectMore',
+                message: 'Select more?',
+            },
+        ])
+
+        if (!selectMore.match(/^y/i)) {
+            done = true
+        }
+    }
+
+    return selected
+}
+
+// Main function to run the script
+const main = async (auto = false) => {
+    // TODO: use `auto` to autoselect all files in non-interactive mode
+
+    // 1. import recipes
+    const recipes = await selectPageType('recipe')
+
+    // 2. import pages
+    const pages = await selectPageType('page')
+
+    // 3. convert to a map permalink->language->content
+    const content: ContentType = {}
+
+    recipes.forEach((recipe) => {
+        const key = recipe.permalink
+        const existingId = content[key] ?? {}
+        existingId[recipe.language] = {
+            heading: recipe.heading,
+            markdown: recipe.markdown,
+        }
+        content[key] = existingId
+    })
+
+    pages.forEach((page) => {
+        const key = page.permalink
+        const existingId = content[key] ?? {}
+        existingId[page.language] = {
+            heading: page.heading,
+            markdown: page.markdown,
+        }
+        content[key] = existingId
+    })
+
+    console.log('---------------------------CONTENT to seed -----------------')
+    console.log(content)
+
+    if (Object.entries(content).length) {
+        await db.populate(content)
+    }
 }
 
 // Run the script
-main().catch((error) => console.error('Error:', error))
+main().catch((error) => console.error(error))

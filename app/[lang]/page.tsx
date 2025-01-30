@@ -4,8 +4,9 @@ import { LocaleProps } from './propTypes'
 export default async function PageWithLocale(props: LocaleProps) {
     const { lang } = props.params
     const content = await db.getPage('/', lang)
-
     const { heading, body } = content ?? {}
+
+    const recipes = await db.getRecipes(lang)
 
     return (
         content && (
@@ -14,7 +15,18 @@ export default async function PageWithLocale(props: LocaleProps) {
                     <h1>
                         <a href="/">{heading}</a>
                     </h1>
-                    <p>{body}</p>
+                    {body && (
+                        <main dangerouslySetInnerHTML={{ __html: body }}></main>
+                    )}
+                    {recipes.length && (
+                        <ul>
+                            {recipes.map((recipe) => (
+                                <li>
+                                    <a href={recipe.url}>{recipe.heading}</a>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                 </div>
             </div>
         )

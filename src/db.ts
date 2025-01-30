@@ -1,10 +1,11 @@
+import { promises as fs } from 'fs'
+import path from 'path'
 import crypto from 'crypto'
 import sqlite3 from 'sqlite3'
 import { type Database as DatabaseSqlite, open } from 'sqlite'
-import { promises as fs } from 'fs'
-import { PageContent, Locale } from '../app/i18n'
-import path from 'path'
-import { CONTENT } from './content'
+import type { ContentType, PageContent, Locale, PageContentFace } from './types'
+import { loggingLevel } from './config'
+import markdownToHtml from './md-to-html'
 
 type SQLDBType = DatabaseSqlite<sqlite3.Database, sqlite3.Statement>
 
@@ -36,18 +37,18 @@ type CollectionName = keyof CollectionsMap
 
 type Collection<Name extends CollectionName> = CollectionsMap[Name]
 
-if (process.env.VERBOSE) {
+if (loggingLevel === 'TRACE') {
     sqlite3.verbose()
 }
 
 class Database {
     private DB_DIR = './sqlite-data'
     private DB_FILE = path.join(this.DB_DIR, 'database.db')
-    private _db: SQLDBType | null = null
+    private _db: SQLDBType
     private initializing = false
     private logger = {
         verbose(method: string, obj?: Record<string, any>) {
-            if (process.env.VERBOSE) {
+            if (['DEBUG', 'TRACE'].includes(loggingLevel)) {
                 console.log(
                     ` DB.${method}`,
                     obj ? JSON.stringify(obj, null, 2).split('\n').join('') : ''
@@ -60,6 +61,10 @@ class Database {
                 obj ? JSON.stringify(obj, null, 2).split('\n').join('') : ''
             )
         },
+    }
+
+    constructor() {
+        this.initDatabase()
     }
 
     private async initDatabase() {
@@ -97,62 +102,8 @@ class Database {
         )`)
 
         this._db = db
-        await this.seed(CONTENT)
 
         this.initializing = false
-    }
-
-    private async seed(content: typeof CONTENT) {
-        this.logger.verbose('seed', { content })
-        const newHash = crypto
-            .createHash('sha256')
-            .update(JSON.stringify(content))
-            .digest('hex')
-
-        if (!this._db) {
-            throw new Error('No Database to seed into')
-        }
-
-        const db = this._db
-
-        const query = `SELECT * FROM migrations  WHERE hash = "${newHash}" LIMIT 1`
-        this.logger.verbose('seed get migration', { query })
-        const existingHash = await this._db.run(query)
-
-        if (existingHash?.[0]) {
-            this.logger.info(
-                `seed. No need to seed. Done at: ${existingHash?.[0].date}\n${existingHash?.[0].hash}`
-            )
-            return
-        }
-
-        const paths = Object.keys(content)
-        const pages: [string, Locale, string, string][] = []
-
-        paths.forEach((path) => {
-            const locales = Object.keys(content[path]) as Locale[]
-            locales.forEach((locale) => {
-                const page = content[path][locale]
-                pages.push([path, locale, page.heading, page.body])
-            })
-        })
-
-        await Promise.all(
-            pages.map(async (page) => {
-                const query = `path = "${page[0]}" AND locale = "${page[1]}"`
-                const fullQuery = `SELECT id FROM pages WHERE ${query} LIMIT 1`
-
-                const existingPages = await db.all<Collection<'pages'>[]>(
-                    fullQuery
-                )
-
-                if (!Array.isArray(existingPages) || !existingPages[0]) {
-                    await this.insertPage(...page)
-                }
-            })
-        )
-
-        await this.insertMigration(newHash)
     }
 
     private async insertPage(
@@ -215,7 +166,12 @@ class Database {
     }): Promise<Collection<Name>> {
         this.logger.verbose('getOne', args)
         const { collection, query } = args
-        const records = await this.get({ collection, query, limit: 1 })
+        const records = await this.get({
+            collection,
+            query,
+            order: ['id', -1],
+            limit: 1,
+        })
 
         return records[0]
     }
@@ -223,18 +179,22 @@ class Database {
     private async get<Name extends CollectionName>(args: {
         collection: Name
         query?: string
+        order?: [string, number?]
         limit?: number
         attributes?: (keyof Collection<Name>)[]
     }): Promise<Collection<Name>[]> {
         this.logger.verbose('get', args)
-        const { collection, query, limit, attributes } = args
+        const { collection, query, order, limit, attributes } = args
         const db = await this.db
 
         const a = attributes ? attributes.join(',') : '*'
         const q = query ? ` WHERE ${query}` : ''
+        const o = order
+            ? ` ORDER BY ${order[0]} ${order[1] === -1 ? 'DESC' : 'ASC'}`
+            : ''
         const lim = limit ? ` LIMIT ${limit}` : ''
 
-        const fullQuery = `SELECT ${a} FROM ${collection}${q}${lim}`
+        const fullQuery = `SELECT ${a} FROM ${collection}${q}${o}${lim}`
 
         const results = await db.all<Collection<Name>[]>(fullQuery)
         this.logger.verbose('get', { fullQuery, results })
@@ -245,7 +205,7 @@ class Database {
     async getPage(
         path: string,
         languageCode: Locale
-    ): Promise<PageContent | null> {
+    ): Promise<PageContentFace | null> {
         this.logger.info('getPage', { path, languageCode })
         const page = await this.getOne({
             collection: 'pages',
@@ -257,13 +217,106 @@ class Database {
             return null
         }
 
-        const content: PageContent = {
+        const body = await markdownToHtml(page.body)
+
+        const content: PageContentFace = {
             heading: page.heading,
-            body: page.body,
+            body,
         }
 
         return content
     }
+
+    async getRecipes(
+        languageCode: Locale,
+        limit = 10
+    ): Promise<(Omit<PageContentFace, 'body'> & { url: string })[]> {
+        this.logger.info('getPages', { languageCode, limit })
+        const pages = await this.get({
+            collection: 'pages',
+            query: `path LIKE "/recipe/%" AND locale = "${languageCode}"`,
+            limit,
+            order: ['id', -1],
+        })
+
+        return (pages ?? []).map((page) => {
+            return {
+                heading: page.heading,
+                url: `${languageCode}${page.path}`,
+            }
+        })
+    }
+
+    async populate(content: ContentType) {
+        this.logger.verbose('populate', { content })
+
+        if (!this._db) {
+            throw new Error('No Database to populate into')
+        }
+
+        const db = this._db
+
+        const paths = Object.keys(content)
+        const pages: [string, Locale, string, string][] = []
+
+        paths.forEach((path) => {
+            const locales = Object.keys(content[path]) as Locale[]
+            locales.forEach((locale) => {
+                const page = content[path][locale]
+                pages.push([path, locale, page.heading, page.markdown])
+            })
+        })
+
+        await Promise.all(
+            pages.map(async (page) => {
+                const query = `path = "${page[0]}" AND locale = "${page[1]}"`
+                const fullQuery = `SELECT id FROM pages WHERE ${query} LIMIT 1`
+
+                const existingPages = await db.all<Collection<'pages'>[]>(
+                    fullQuery
+                )
+
+                if (Array.isArray(existingPages) && existingPages[0]) {
+                    this.logger.info(
+                        `Overwriting page "/${page[1]}${page[0]}" (${page[2]})`
+                    )
+                }
+
+                await this.insertPage(...page)
+            })
+        )
+    }
+
+    async seed(content: ContentType) {
+        this.logger.verbose('seed', { content })
+        const newHash = crypto
+            .createHash('sha256')
+            .update(JSON.stringify(content))
+            .digest('hex')
+
+        if (!this._db) {
+            throw new Error('No Database to seed into')
+        }
+
+        const db = this._db
+
+        const query = `SELECT * FROM migrations  WHERE hash = "${newHash}" LIMIT 1`
+        this.logger.verbose('seed get migration', { query })
+        const existingHash = await this._db.run(query)
+
+        if (existingHash?.[0]) {
+            this.logger.info(
+                `seed. No need to seed. Done at: ${existingHash?.[0].date}\n${existingHash?.[0].hash}`
+            )
+            return
+        }
+
+        await this.populate(content)
+
+        await this.insertMigration(newHash)
+    }
 }
 
-export default new Database()
+const dbInstance = new Database()
+
+export default dbInstance

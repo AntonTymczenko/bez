@@ -1,24 +1,8 @@
 import Negotiator, { Headers } from 'negotiator'
 import { match } from '@formatjs/intl-localematcher'
-
-// TODO: read from environment
-const supportedLocales = {
-    pl: '🇵🇱',
-    uk: '🇺🇦',
-    en: '🇺🇲',
-} as const
-
-export type Locale = keyof typeof supportedLocales
-export type PageContentKey = 'heading' | 'body'
-export type PageContent = Record<PageContentKey, string>
-
-function pick(object, ...paths) {
-    return object == null
-        ? {}
-        : Object.fromEntries(
-              Object.entries(object).filter(([key]) => paths.includes(key))
-          )
-}
+import { Locale, supportedLocales } from '../src/types'
+import { pick } from '../src/helpers'
+import { locales } from '../src/config'
 
 class i18n {
     locales: Locale[]
@@ -57,6 +41,6 @@ class i18n {
     }
 }
 
-const instance = new i18n(Object.keys(supportedLocales) as Locale[])
+const instance = new i18n(locales)
 
 export default instance

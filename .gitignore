@@ -1,6 +1,8 @@
 node_modules
 .next
 sqlite-data
-content/*
-!content/.gitkeep
-!content/recipe.md.example
+content/**/*.md
+content/**/*.jp*g
+!content/page/home.example.md
+!content/page/example.md
+!content/recipe/example.md
