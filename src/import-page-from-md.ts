@@ -7,7 +7,7 @@ import {
     recognizeHeading,
 } from './md-to-html'
 import i18n from '../app/i18n'
-import type { ContentType, Locale } from './types'
+import type { CollectionBaseType, ContentType, Locale } from './types'
 import { filePaths } from './constants'
 import db from './db'
 
@@ -260,32 +260,54 @@ const main = async (auto = false) => {
     // 3. convert to a map permalink->language->content
     const content: ContentType = {}
 
+    // Verification
     recipes.forEach((recipe) => {
-        const key = recipe.permalink
-        const existingId = content[key] ?? {}
-        existingId[recipe.language] = {
-            heading: recipe.heading,
-            markdown: recipe.markdown,
+        if (recipe.language === null) {
+            throw new Error(`Locale is not specified for file ${recipe.origin}`)
         }
-        content[key] = existingId
     })
-
     pages.forEach((page) => {
-        const key = page.permalink
+        if (page.language === null) {
+            throw new Error(`Locale is not specified for file ${page.origin}`)
+        }
+    })
+
+    // Save images
+    const imageIds: Map<
+        SelectedItem['imgPermalink'],
+        CollectionBaseType['id']
+    > = new Map()
+
+    for (const page of pages.concat(recipes)) {
+        if (page.imgImportFromPath === null || page.imgPermalink === null) {
+            continue
+        }
+
+        const id = await db.insertImage({
+            permalink: page.imgPermalink,
+            path: page.imgImportFromPath,
+        })
+
+        imageIds.set(page.imgPermalink, id)
+    }
+
+    // Aggregation
+    pages.concat(recipes).forEach((item) => {
+        const key = item.permalink
         const existingId = content[key] ?? {}
-        existingId[page.language] = {
-            heading: page.heading,
-            markdown: page.markdown,
+        existingId[item.language] = {
+            heading: item.heading,
+            markdown: item.markdown,
+            imageId: imageIds.get(item.imgPermalink) ?? null,
         }
         content[key] = existingId
     })
-
-    console.log('---------------------------CONTENT to seed -----------------')
-    console.log(content)
 
     if (Object.entries(content).length) {
-        await db.populate(content)
+        await db.populatePages(content)
     }
+
+    await db.close()
 }
 
 // Run the script

@@ -9,6 +9,7 @@ export type Locale = keyof typeof supportedLocales
 export type PageContent = {
     heading: string // plain text that is used as a page title
     markdown: string // markdown, whole page including H1
+    imageId: number | null // foreign key
 }
 
 export type PageContentFace = Omit<PageContent, 'markdown'> & {
@@ -23,4 +24,9 @@ export type LoggingLevel =
     | 'WARN'
     | 'INFO'
     | 'DEBUG'
+    | 'VERBOSE'
     | 'TRACE'
+
+export type CollectionBaseType = {
+    id: number
+}

@@ -1,205 +1,94 @@
-import { promises as fs } from 'fs'
+import fs from 'fs'
 import path from 'path'
-import crypto from 'crypto'
-import sqlite3 from 'sqlite3'
-import { type Database as DatabaseSqlite, open } from 'sqlite'
-import type { ContentType, PageContent, Locale, PageContentFace } from './types'
-import { loggingLevel } from './config'
+import type {
+    CollectionBaseType,
+    ContentType,
+    Locale,
+    PageContentFace,
+} from './types'
 import markdownToHtml from './md-to-html'
+import DatabaseCommon from './db-common'
 
-type SQLDBType = DatabaseSqlite<sqlite3.Database, sqlite3.Statement>
+type ImageEntry = {
+    permalink: string
+    path: string
+}
 
-type CollectionPage = {
-    id: number
+type CollectionPage = CollectionBaseType & {
     path: string
     locale: Locale
     heading: string
     body: string
+    image_id: number | null
 }
-type CollectionUser = {
-    id: number
+
+type CollectionImage = CollectionBaseType & {
+    permalink: string
+    data: Buffer
+}
+
+type CollectionUser = CollectionBaseType & {
     name: string
 }
 
-type CollectionMigration = {
-    id: number
+type CollectionMigration = CollectionBaseType & {
     date: string // Store date in ISO 8601 format
     hash: string
 }
 
-type CollectionsMap = {
+export type CollectionsMap = {
     pages: CollectionPage
+    images: CollectionImage
     users: CollectionUser
     migrations: CollectionMigration
 }
 
-type CollectionName = keyof CollectionsMap
+export type CollectionName = keyof CollectionsMap
+export type Collection<Name extends CollectionName> = CollectionsMap[Name]
 
-type Collection<Name extends CollectionName> = CollectionsMap[Name]
-
-if (loggingLevel === 'TRACE') {
-    sqlite3.verbose()
-}
-
-class Database {
-    private DB_DIR = './sqlite-data'
-    private DB_FILE = path.join(this.DB_DIR, 'database.db')
-    private _db: SQLDBType
-    private initializing = false
-    private logger = {
-        verbose(method: string, obj?: Record<string, any>) {
-            if (['DEBUG', 'TRACE'].includes(loggingLevel)) {
-                console.log(
-                    ` DB.${method}`,
-                    obj ? JSON.stringify(obj, null, 2).split('\n').join('') : ''
-                )
-            }
-        },
-        info(method: string, obj?: Record<string, any>) {
-            console.log(
-                ` DB.${method}`,
-                obj ? JSON.stringify(obj, null, 2).split('\n').join('') : ''
-            )
-        },
-    }
-
+class Database extends DatabaseCommon {
     constructor() {
-        this.initDatabase()
+        super()
     }
 
-    private async initDatabase() {
-        this.logger.verbose('initDatabase')
-
-        this.initializing = true
-        await fs.mkdir(this.DB_DIR, { recursive: true })
-
-        const db = await open({
-            filename: this.DB_FILE,
-            driver: sqlite3.cached.Database,
-        })
-
-        await db.exec(`CREATE TABLE IF NOT EXISTS pages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            path TEXT NOT NULL,
-            locale TEXT NOT NULL,
-            heading TEXT NOT NULL,
-            body TEXT NOT NULL
-        )`)
-
-        await db.exec(`CREATE TABLE IF NOT EXISTS images (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            page_id INTEGER NOT NULL,
-            alt TEXT NOT NULL,
-            permalink TEXT NOT NULL,
-            path TEXT NOT NULL,
-            FOREIGN KEY (page_id) REFERENCES pages (id) ON DELETE CASCADE
-        )`)
-
-        await db.exec(`CREATE TABLE IF NOT EXISTS migrations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT NOT NULL,
-            hash TEXT NOT NULL
-        )`)
-
-        this._db = db
-
-        this.initializing = false
+    protected async initDatabase() {
+        this.initDatabaseWrapper([
+            `CREATE TABLE IF NOT EXISTS pages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                path TEXT NOT NULL,
+                locale TEXT NOT NULL,
+                heading TEXT NOT NULL,
+                body TEXT NOT NULL,
+                image_id INTEGER,
+                FOREIGN KEY (image_id) REFERENCES images (id) ON DELETE SET NULL
+            )`,
+            `CREATE TABLE IF NOT EXISTS images (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                permalink TEXT NOT NULL,
+                data BLOB NOT NULL
+            )`,
+            `CREATE TABLE IF NOT EXISTS migrations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT NOT NULL,
+                hash TEXT NOT NULL
+            )`,
+        ])
     }
 
     private async insertPage(
         path: string,
-        locale: string,
+        locale: Locale,
         heading: string,
-        body: string
+        body: string,
+        imageId: number | null
     ) {
-        const db = this._db!
-
-        const res = await db.run(
-            `INSERT INTO pages (path, locale, heading, body) VALUES (?, ?, ?, ?)`,
-
-            [path, locale, heading, body]
-        )
-
-        return res
-    }
-
-    private async insertMigration(hash: string) {
-        this.logger.verbose('insertMigration', { hash })
-        const db = this._db!
-
-        const template = 'INSERT INTO migrations (hash, date) VALUES (?, ?)'
-        const opts = [hash, new Date().toISOString()]
-        this.logger.verbose('insertMigration db.run', { template, opts })
-        db.run(template, opts)
-
-        this.logger.verbose(
-            `insertMigration. Done seeding. Migration hash: ${hash}`
-        )
-    }
-
-    private get db(): Promise<SQLDBType> {
-        this.logger.verbose('db')
-        if (this.initializing) {
-            this.logger.verbose('db stillInitializing')
-            return new Promise<SQLDBType>((resolve) => {
-                this.logger.verbose('db Timeout: wait for DB to be ready')
-                setTimeout(() => {
-                    resolve(this.db)
-                }, 10000)
-            })
-        }
-
-        if (this._db) {
-            this.logger.verbose('db not initializing, got DB (this._db)')
-            return Promise.resolve(this._db)
-        }
-
-        return this.initDatabase().then(() => {
-            this.logger.verbose('db after initDatabase')
-            return this.db
+        return this.insertOne('pages', {
+            path,
+            locale,
+            heading,
+            body,
+            image_id: imageId,
         })
-    }
-
-    private async getOne<Name extends CollectionName>(args: {
-        collection: Name
-        query: string
-    }): Promise<Collection<Name>> {
-        this.logger.verbose('getOne', args)
-        const { collection, query } = args
-        const records = await this.get({
-            collection,
-            query,
-            order: ['id', -1],
-            limit: 1,
-        })
-
-        return records[0]
-    }
-
-    private async get<Name extends CollectionName>(args: {
-        collection: Name
-        query?: string
-        order?: [string, number?]
-        limit?: number
-        attributes?: (keyof Collection<Name>)[]
-    }): Promise<Collection<Name>[]> {
-        this.logger.verbose('get', args)
-        const { collection, query, order, limit, attributes } = args
-        const db = await this.db
-
-        const a = attributes ? attributes.join(',') : '*'
-        const q = query ? ` WHERE ${query}` : ''
-        const o = order
-            ? ` ORDER BY ${order[0]} ${order[1] === -1 ? 'DESC' : 'ASC'}`
-            : ''
-        const lim = limit ? ` LIMIT ${limit}` : ''
-
-        const fullQuery = `SELECT ${a} FROM ${collection}${q}${o}${lim}`
-
-        const results = await db.all<Collection<Name>[]>(fullQuery)
-        this.logger.verbose('get', { fullQuery, results })
-
-        return results ?? []
     }
 
     async getPage(
@@ -213,7 +102,7 @@ class Database {
         })
 
         if (!page) {
-            this.logger.verbose('getPage, no page')
+            this.logger.verbose('getPage: no page')
             return null
         }
 
@@ -222,6 +111,7 @@ class Database {
         const content: PageContentFace = {
             heading: page.heading,
             body,
+            imageId: page.image_id,
         }
 
         return content
@@ -231,7 +121,7 @@ class Database {
         languageCode: Locale,
         limit = 10
     ): Promise<(Omit<PageContentFace, 'body'> & { url: string })[]> {
-        this.logger.info('getPages', { languageCode, limit })
+        this.logger.info('getRecipes', { languageCode, limit })
         const pages = await this.get({
             collection: 'pages',
             query: `path LIKE "/recipe/%" AND locale = "${languageCode}"`,
@@ -243,27 +133,98 @@ class Database {
             return {
                 heading: page.heading,
                 url: `${languageCode}${page.path}`,
+                imageId: page.image_id,
             }
         })
     }
 
-    async populate(content: ContentType) {
-        this.logger.verbose('populate', { content })
+    async insertImage(image: ImageEntry): Promise<number> {
+        const { path, permalink } = image
+
+        if (!fs.existsSync(path)) {
+            throw new Error(`File not found: ${path}`)
+        }
+
+        const data = fs.readFileSync(path)
+
+        try {
+            const res = await this.insertOne('images', {
+                permalink,
+                data,
+            })
+
+            if (res.lastID === undefined) {
+                throw new Error('Insertion result lastID is undefined')
+            }
+
+            let id = res.lastID
+
+            if (id === 0) {
+                // when lastID is zero - nothing has been inserted, the image is already stored
+                const existingImages = await this.get({
+                    collection: 'images',
+                    query: `permalink = "${permalink}"`,
+                    attributes: ['id'],
+                    limit: 1,
+                })
+
+                if (!existingImages[0]) {
+                    throw new Error(
+                        'Expected image to be already stored, but failed to find it by permalink'
+                    )
+                }
+
+                id = existingImages[0].id
+            }
+
+            return id
+        } catch (error) {
+            this.logger.error('insertImage', error)
+            throw new Error(`Failed to insert image ${path}`)
+        }
+    }
+
+    async getImageData(permalink: string): Promise<null | Buffer> {
+        const image = await this.getOne({
+            collection: 'images',
+            query: `permalink = "${permalink}"`,
+        })
+
+        if (!image) {
+            return null
+        }
+
+        return image.data
+    }
+
+    async populatePages(content: ContentType) {
+        this.logger.verbose('populatePages', { content })
+
+        console.log(
+            '---------------------------CONTENT to populate -----------------'
+        )
+        console.log(content)
 
         if (!this._db) {
             throw new Error('No Database to populate into')
         }
 
-        const db = this._db
+        const db = await this.db
 
         const paths = Object.keys(content)
-        const pages: [string, Locale, string, string][] = []
+        const pages: [string, Locale, string, string, number | null][] = []
 
         paths.forEach((path) => {
             const locales = Object.keys(content[path]) as Locale[]
             locales.forEach((locale) => {
                 const page = content[path][locale]
-                pages.push([path, locale, page.heading, page.markdown])
+                pages.push([
+                    path,
+                    locale,
+                    page.heading,
+                    page.markdown,
+                    page.imageId,
+                ])
             })
         })
 
@@ -278,42 +239,13 @@ class Database {
 
                 if (Array.isArray(existingPages) && existingPages[0]) {
                     this.logger.info(
-                        `Overwriting page "/${page[1]}${page[0]}" (${page[2]})`
+                        `PopulatePages: Overwriting page "/${page[1]}${page[0]}" (${page[2]})`
                     )
                 }
 
                 await this.insertPage(...page)
             })
         )
-    }
-
-    async seed(content: ContentType) {
-        this.logger.verbose('seed', { content })
-        const newHash = crypto
-            .createHash('sha256')
-            .update(JSON.stringify(content))
-            .digest('hex')
-
-        if (!this._db) {
-            throw new Error('No Database to seed into')
-        }
-
-        const db = this._db
-
-        const query = `SELECT * FROM migrations  WHERE hash = "${newHash}" LIMIT 1`
-        this.logger.verbose('seed get migration', { query })
-        const existingHash = await this._db.run(query)
-
-        if (existingHash?.[0]) {
-            this.logger.info(
-                `seed. No need to seed. Done at: ${existingHash?.[0].date}\n${existingHash?.[0].hash}`
-            )
-            return
-        }
-
-        await this.populate(content)
-
-        await this.insertMigration(newHash)
     }
 }
 
