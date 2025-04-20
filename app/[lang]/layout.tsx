@@ -1,42 +1,27 @@
-import './global.css'
+import '~app/global.css'
 
-import { Metadata } from 'next'
-import i18n from '../i18n'
-import LocaleSwitcher from './components/locale-switcher'
-import type { ChildrenProps, LocaleProps } from './propTypes'
-import db from '../../src/db'
-import HeaderNavigation from './components/header-navigation'
+import Config from '~src/config'
+import LocaleSwitcher from '~src/components/locale-switcher'
+import type { PageParams } from '~src/types'
+import type { ChildrenProps } from '~src/types'
+import HeaderNavigation from '~src/components/header-navigation'
+import I18n from '~src/i18n'
 
-export async function generateStaticParams() {
-    return i18n.locales.map((locale) => ({ lang: locale }))
-}
+const locales = new I18n(Config.locales).getLocalesWithFlags()
 
-export default function Root(props: ChildrenProps & LocaleProps) {
-    const {
-        children,
-        params: { lang },
-    } = props
+export default async function Root(props: ChildrenProps & PageParams) {
+    const { children } = props
+
+    const params = await props.params
+    const { lang } = params
 
     return (
         <html lang={lang}>
             <body>
                 <HeaderNavigation lang={lang} />
-                <LocaleSwitcher current={lang} />
+                <LocaleSwitcher current={lang} locales={locales} />
                 {children}
             </body>
         </html>
     )
-}
-
-export async function generateMetadata(props: LocaleProps): Promise<Metadata> {
-    const content = await db.getPage('/', props.params.lang)
-    if (!content?.heading) {
-        return {}
-    }
-    const { heading } = content
-
-    return {
-        title: heading,
-        description: heading,
-    }
 }

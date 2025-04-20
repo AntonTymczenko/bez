@@ -29,9 +29,9 @@ body {
     font-size: 1.5rem;
 }
 
-.homepage a ,
-.locale-switcher a ,
-.header-navigation a ,
+.homepage a,
+.locale-switcher a,
+.header-navigation a,
 h1 a {
     text-decoration: none;
     color: inherit;

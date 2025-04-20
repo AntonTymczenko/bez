@@ -1,6 +1,6 @@
 import sqlite3 from 'sqlite3'
 import { type Database as DatabaseSqlite, open } from 'sqlite'
-import * as Config from './config'
+import Config from './config'
 import type { Collection, CollectionName, CollectionsMap } from './db'
 import Logger from './logger'
 
@@ -53,7 +53,7 @@ abstract class DatabaseCommon {
                 this.logger.verbose('db Timeout: wait for DB to be ready')
                 setTimeout(() => {
                     resolve(this.db)
-                }, 10000)
+                }, 1000)
             })
         }
 
@@ -71,14 +71,16 @@ abstract class DatabaseCommon {
     protected async getOne<Name extends CollectionName>(args: {
         collection: Name
         query: string
+        attributes?: (keyof Collection<Name>)[]
     }): Promise<CollectionsMap[Name] | null> {
         this.logger.verbose('getOne', args)
-        const { collection, query } = args
+        const { collection, query, attributes } = args
         const records = await this.get({
             collection,
             query,
             order: ['id', -1],
             limit: 1,
+            attributes: attributes ?? [],
         })
 
         if (!records[0]) {
@@ -98,8 +100,8 @@ abstract class DatabaseCommon {
         const { collection, query, order, limit, attributes } = args
         const db = await this.db
 
-        const a = attributes ? attributes.join(',') : '*'
-        const q = query ? ` WHERE ${query}` : ''
+        const a = attributes?.length ? attributes.join(',') : '*'
+        const q = query ? ` ${query}` : ''
         const o = order
             ? ` ORDER BY ${order[0]} ${order[1] === -1 ? 'DESC' : 'ASC'}`
             : ''
@@ -107,10 +109,17 @@ abstract class DatabaseCommon {
 
         const fullQuery = `SELECT ${a} FROM ${collection}${q}${o}${lim}`
 
-        const results = await db.all<Collection<Name>[]>(fullQuery)
-        this.logger.verbose('get', { fullQuery, results })
+        this.logger.verbose('get', {
+            query: fullQuery,
+        })
+        let results: Collection<Name>[] = []
+        try {
+            results = await db.all<Collection<Name>[]>(fullQuery)
+        } catch (e) {
+            this.logger.error('get', e)
+        }
 
-        return results ?? []
+        return results
     }
 
     protected async insertOne<Name extends CollectionName>(

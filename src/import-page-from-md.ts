@@ -1,15 +1,18 @@
 import * as fs from 'fs'
-import * as path from 'path'
 import inquirer from 'inquirer'
+import * as path from 'path'
+import Config from './config'
+import { filePaths } from './constants'
+import Database from './db'
+import I18n from './i18n'
 import {
     getPermalinkFromFilename,
     readTextFile,
     recognizeHeading,
 } from './md-to-html'
-import i18n from '../app/i18n'
 import type { CollectionBaseType, ContentType, Locale } from './types'
-import { filePaths } from './constants'
-import db from './db'
+
+const logger = console
 
 type File = {
     path: string
@@ -31,6 +34,8 @@ type SelectedItem = {
     imgImportFromPath: string | null
     imageAlreadyStored: boolean
 }
+
+const db = new Database()
 
 const prompt = inquirer.createPromptModule()
 
@@ -69,31 +74,15 @@ const getFiles = (dir: string) => {
     return { mdFiles, jpgFiles }
 }
 
-function extractTrailingLanguageCode(baseName: string): {
-    bareName: string
-    language?: Locale
-} {
-    const locs = i18n.locales.join('|')
-    const matcher = new RegExp(`\\s(${locs})$`, 'i')
-
-    const language = baseName.match(matcher)?.[1]?.toLowerCase() as Locale
-    const locale = i18n.validateLocale(language)
-
-    const bareName = baseName.replace(matcher, '')
-
-    return {
-        language: locale,
-        bareName,
-    }
-}
-
 function getBareNameFromFullPath(filePath: string): {
     bareName: string
     language?: Locale
 } {
     const baseName = path.basename(filePath).replace(/\.\w{2,4}$/i, '')
 
-    const { bareName, language } = extractTrailingLanguageCode(baseName)
+    const { bareName, language } = new I18n(
+        Config.locales
+    ).extractTrailingLanguageCode(baseName)
 
     return { bareName, language }
 }
@@ -117,7 +106,7 @@ async function confirm(
 ): Promise<SelectedItem | null> {
     // TODO: type of return
     if (!imageFile) {
-        console.log(`No matching image found for ${mdFile.name}`)
+        logger.warn(`No matching image found for ${mdFile.name}`)
     }
 
     const markdownContent = readTextFile(mdFile.path)
@@ -158,7 +147,7 @@ async function confirm(
         imageAlreadyStored,
     }
 
-    console.log('Result:', JSON.stringify(result, null, 2))
+    logger.info('Result:', JSON.stringify(result, null, 2))
 
     // Prompt the user to confirm
     const confirmation = await prompt([
@@ -192,7 +181,7 @@ async function selectPageType(
 
     let unprocessedCount = mdFiles.length
     if (unprocessedCount === 0) {
-        console.log(
+        logger.warn(
             `No markdown files found in the content "${pageType}" folder ${dir}`
         )
         return []
@@ -200,7 +189,7 @@ async function selectPageType(
 
     let done = false
 
-    console.log(mdFiles)
+    logger.info(mdFiles)
     while (unprocessedCount && !done) {
         // Prompt the user to select a markdown file
         const answer = await prompt([
@@ -248,7 +237,7 @@ async function selectPageType(
 }
 
 // Main function to run the script
-const main = async (auto = false) => {
+const main = async (_auto = false) => {
     // TODO: use `auto` to autoselect all files in non-interactive mode
 
     // 1. import recipes
@@ -311,4 +300,4 @@ const main = async (auto = false) => {
 }
 
 // Run the script
-main().catch((error) => console.error(error))
+main().catch((error) => logger.error(error))

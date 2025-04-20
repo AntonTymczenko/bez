@@ -1,13 +1,12 @@
-import fs from 'fs'
-import path from 'path'
+import * as fs from 'fs'
+import DatabaseCommon from './db-common'
+import markdownToHtml from './md-to-html'
 import type {
     CollectionBaseType,
     ContentType,
     Locale,
     PageContentFace,
 } from './types'
-import markdownToHtml from './md-to-html'
-import DatabaseCommon from './db-common'
 
 type ImageEntry = {
     permalink: string
@@ -46,7 +45,7 @@ export type CollectionsMap = {
 export type CollectionName = keyof CollectionsMap
 export type Collection<Name extends CollectionName> = CollectionsMap[Name]
 
-class Database extends DatabaseCommon {
+export default class Database extends DatabaseCommon {
     constructor() {
         super()
     }
@@ -98,7 +97,7 @@ class Database extends DatabaseCommon {
         this.logger.info('getPage', { path, languageCode })
         const page = await this.getOne({
             collection: 'pages',
-            query: `path = "${path}" AND locale = "${languageCode}"`,
+            query: `WHERE path = "${path}" AND locale = "${languageCode}"`,
         })
 
         if (!page) {
@@ -117,6 +116,20 @@ class Database extends DatabaseCommon {
         return content
     }
 
+    async getPageTitle(
+        path: string,
+        languageCode: Locale
+    ): Promise<PageContentFace['heading'] | null> {
+        this.logger.info('getPageTitle', { path, languageCode })
+        const page = await this.getOne({
+            collection: 'pages',
+            query: `WHERE path = "${path}" AND locale = "${languageCode}"`,
+            attributes: ['heading'],
+        })
+
+        return page?.heading ?? null
+    }
+
     async getRecipes(
         languageCode: Locale,
         limit = 10
@@ -124,18 +137,24 @@ class Database extends DatabaseCommon {
         this.logger.info('getRecipes', { languageCode, limit })
         const pages = await this.get({
             collection: 'pages',
-            query: `path LIKE "/recipe/%" AND locale = "${languageCode}"`,
+            query: `
+                WHERE id IN (
+                    SELECT MAX(id)
+                    FROM pages
+                    WHERE path LIKE "/recipe/%" AND locale = "${languageCode}"
+                    GROUP BY path
+                )
+            `,
             limit,
             order: ['id', -1],
+            attributes: ['heading', 'path', 'image_id'],
         })
 
-        return (pages ?? []).map((page) => {
-            return {
-                heading: page.heading,
-                url: `${languageCode}${page.path}`,
-                imageId: page.image_id,
-            }
-        })
+        return (pages ?? []).map((page) => ({
+            heading: page.heading,
+            url: `${languageCode}${page.path}`,
+            imageId: page.image_id,
+        }))
     }
 
     async insertImage(image: ImageEntry): Promise<number> {
@@ -163,7 +182,7 @@ class Database extends DatabaseCommon {
                 // when lastID is zero - nothing has been inserted, the image is already stored
                 const existingImages = await this.get({
                     collection: 'images',
-                    query: `permalink = "${permalink}"`,
+                    query: `WHERE permalink = "${permalink}"`,
                     attributes: ['id'],
                     limit: 1,
                 })
@@ -200,10 +219,10 @@ class Database extends DatabaseCommon {
     async populatePages(content: ContentType) {
         this.logger.verbose('populatePages', { content })
 
-        console.log(
+        this.logger.info(
             '---------------------------CONTENT to populate -----------------'
         )
-        console.log(content)
+        this.logger.info('', content)
 
         if (!this._db) {
             throw new Error('No Database to populate into')
@@ -233,9 +252,8 @@ class Database extends DatabaseCommon {
                 const query = `path = "${page[0]}" AND locale = "${page[1]}"`
                 const fullQuery = `SELECT id FROM pages WHERE ${query} LIMIT 1`
 
-                const existingPages = await db.all<Collection<'pages'>[]>(
-                    fullQuery
-                )
+                const existingPages =
+                    await db.all<Collection<'pages'>[]>(fullQuery)
 
                 if (Array.isArray(existingPages) && existingPages[0]) {
                     this.logger.info(
@@ -248,7 +266,3 @@ class Database extends DatabaseCommon {
         )
     }
 }
-
-const dbInstance = new Database()
-
-export default dbInstance

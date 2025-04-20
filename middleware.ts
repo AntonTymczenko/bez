@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-import i18n from './app/i18n'
+import I18n from '~src/i18n'
+import Config from '~src/config'
 
 function getHeaders(request: NextRequest): Record<string, string> {
     const headers: Record<string, string> = {}
@@ -9,6 +10,8 @@ function getHeaders(request: NextRequest): Record<string, string> {
 
     return headers
 }
+
+const i18n = new I18n(Config.locales)
 
 export function middleware(request: NextRequest) {
     const pathname = request.nextUrl.pathname
@@ -30,13 +33,10 @@ export function middleware(request: NextRequest) {
     }
 
     // Check if there is any supported locale in the pathname
-    const pathnameIsMissingLocale = i18n.locales.every(
-        (locale) =>
-            !pathname.startsWith(`/${locale}/`) && pathname !== `/${locale}`
-    )
+    const localeRecognized = i18n.localeRecognizedInPath(pathname)
 
-    // Redirect if there is no locale
-    if (pathnameIsMissingLocale) {
+    // Redirect
+    if (!localeRecognized) {
         // Negotiator expects plain object so we need to transform headers
         const headers = getHeaders(request)
         const locale = i18n.getLocale(headers)

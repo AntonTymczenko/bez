@@ -6,8 +6,9 @@
         "strict": false,
         "noEmit": true,
         "incremental": true,
-        "module": "commonjs",
-        "target": "esnext",
+        "module": "ESNext",
+        "target": "ES2022",
+        "verbatimModuleSyntax": true,
         "esModuleInterop": true,
         "moduleResolution": "node",
         "resolveJsonModule": true,
@@ -18,7 +19,18 @@
                 "name": "next"
             }
         ],
-        "strictNullChecks": true
+        "strictNullChecks": true,
+        "paths": {
+            "~src/*": ["./src/*"],
+            "~app/*": ["./app/*"]
+        }
+    },
+    "ts-node": {
+        "compilerOptions": {
+            "module": "CommonJS",
+            "target": "ESNext",
+            "verbatimModuleSyntax": false
+        }
     },
     "include": ["next-env.d.ts", ".next/types/**/*.ts", "**/*.ts", "**/*.tsx"],
     "exclude": ["node_modules", ".next"]

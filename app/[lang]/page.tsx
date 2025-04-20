@@ -1,34 +1,55 @@
-import db from '../../src/db'
-import { LocaleProps } from './propTypes'
+import { type Metadata } from 'next'
+import { notFound } from 'next/navigation'
+import HomePageContent from '~src/components/home-page-content'
+import type { PageParams } from '~src/types'
 
-export default async function PageWithLocale(props: LocaleProps) {
-    const { lang } = props.params
-    const content = await db.getPage('/', lang)
-    const { heading, body } = content ?? {}
+import ArticlePageConent from '~src/components/article-page-content'
+import Database from '~src/db'
 
-    const recipes = await db.getRecipes(lang)
+const db = new Database()
 
-    return (
-        content && (
-            <div className="homepage">
-                <div className="container">
-                    <h1>
-                        <a href="/">{heading}</a>
-                    </h1>
-                    {body && (
-                        <main dangerouslySetInnerHTML={{ __html: body }}></main>
-                    )}
-                    {recipes.length && (
-                        <ul>
-                            {recipes.map((recipe) => (
-                                <li key={recipe.url}>
-                                    <a href={recipe.url}>{recipe.heading}</a>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </div>
-            </div>
-        )
+export default async function PageWithLocale(props: PageParams) {
+    const params = await props.params
+    const { lang } = params
+
+    const path = params.path ? `/${params.path}` : '/'
+
+    const content = await db.getPage(path, lang)
+    if (!content) {
+        return notFound()
+    }
+    const { heading, body } = content
+
+    return path === '/' ? (
+        <HomePageContent
+            {...{
+                heading,
+                body,
+                lang,
+                imageId: null,
+            }}
+        />
+    ) : (
+        <ArticlePageConent
+            {...{
+                params: props.params,
+                heading,
+                body,
+                imageId: null,
+            }}
+        />
     )
+}
+
+export async function generateMetadata(props: PageParams): Promise<Metadata> {
+    const { lang, path } = await props.params
+    const heading = await db.getPageTitle(path ? `/${path}` : '/', lang)
+    if (!heading) {
+        return {}
+    }
+
+    return {
+        title: heading,
+        description: heading,
+    }
 }

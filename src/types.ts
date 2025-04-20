@@ -1,3 +1,5 @@
+import type Database from './db'
+
 // extend this list as needed and provide a proper flag to each item
 export const supportedLocales = {
     pl: '🇵🇱',
@@ -29,4 +31,16 @@ export type LoggingLevel =
 
 export type CollectionBaseType = {
     id: number
+}
+
+export type ChildrenProps = {
+    children: React.ReactNode
+}
+
+export type PageParams = {
+    params: Promise<{ lang: Locale; path?: string }>
+}
+
+export type PageContentProps = PageContentFace & {
+    recipes: Awaited<ReturnType<Database['getRecipes']>>
 }
