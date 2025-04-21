@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import HeaderNavigation from '~src/components/header-navigation'
@@ -33,7 +34,12 @@ export default async function PageWithLocale(props: PageParamsLang) {
                         <Link href={dbPath}>{heading}</Link>
                     </h1>
                     {imageId && (
-                        <img src={`/img/${imageId}`} width="100" height="100" />
+                        <Image
+                            src={`/img/${imageId}`}
+                            width="100"
+                            height="100"
+                            alt={heading}
+                        />
                     )}
                     <Markdown lang={lang} markdown={markdown} />
                 </div>
