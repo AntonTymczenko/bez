@@ -1,29 +1,28 @@
-import sqlite3 from 'sqlite3'
 import { type Database as DatabaseSqlite, open } from 'sqlite'
-import Config from './config'
+import sqlite3 from 'sqlite3'
 import type { Collection, CollectionName, CollectionsMap } from './db'
 import Logger from './logger'
+import type { DatabaseOptions } from './types'
 
 type SQLDBType = DatabaseSqlite<sqlite3.Database, sqlite3.Statement>
 
-abstract class DatabaseCommon {
+abstract class DatabaseBase {
     protected databaseFilepath: string
     protected _db: SQLDBType | null = null
     protected initializing = false
     protected logger: Logger
+    protected abstract tables: string[]
 
-    constructor() {
-        this.databaseFilepath = Config.database.path
-        this.logger = new Logger()
-        if (Config.loggingLevel === 'TRACE') {
+    constructor(options: DatabaseOptions) {
+        this.databaseFilepath = options.dbPath
+        this.logger = new Logger(options.loggerLevel)
+        if (options.loggerLevel === 'TRACE') {
             sqlite3.verbose()
         }
         this.initDatabase()
     }
 
-    protected abstract initDatabase(): Promise<void>
-
-    protected async initDatabaseWrapper(instructions: string[]) {
+    private async initDatabase() {
         this.logger.verbose('initDatabase')
 
         this.initializing = true
@@ -33,7 +32,7 @@ abstract class DatabaseCommon {
             driver: sqlite3.cached.Database,
         })
 
-        for (const instruction of instructions) {
+        for (const instruction of this.tables) {
             if (!instruction.startsWith('CREATE TABLE IF NOT EXISTS')) {
                 throw new Error('Invalid initialization instruction')
             }
@@ -46,7 +45,6 @@ abstract class DatabaseCommon {
     }
 
     protected get db(): Promise<SQLDBType> {
-        this.logger.verbose('db')
         if (this.initializing) {
             this.logger.verbose('db stillInitializing')
             return new Promise<SQLDBType>((resolve) => {
@@ -58,7 +56,6 @@ abstract class DatabaseCommon {
         }
 
         if (this._db) {
-            this.logger.verbose('db not initializing, got DB (this._db)')
             return Promise.resolve(this._db)
         }
 
@@ -73,7 +70,6 @@ abstract class DatabaseCommon {
         query: string
         attributes?: (keyof Collection<Name>)[]
     }): Promise<CollectionsMap[Name] | null> {
-        this.logger.verbose('getOne', args)
         const { collection, query, attributes } = args
         const records = await this.get({
             collection,
@@ -109,7 +105,7 @@ abstract class DatabaseCommon {
 
         const fullQuery = `SELECT ${a} FROM ${collection}${q}${o}${lim}`
 
-        this.logger.verbose('get', {
+        this.logger.trace('get', {
             query: fullQuery,
         })
         let results: Collection<Name>[] = []
@@ -151,4 +147,4 @@ abstract class DatabaseCommon {
     }
 }
 
-export default DatabaseCommon
+export default DatabaseBase

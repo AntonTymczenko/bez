@@ -1,8 +1,8 @@
-import path from 'path'
 import fs from 'fs'
-import type { Locale, LoggingLevel } from './types'
+import path from 'path'
+import type { Locale, LoggerLevel } from './types'
 
-class database {
+class DbConfig {
     private static readonly FOLDER = './sqlite-data'
     private static readonly MAIN_DB_FILE = 'database.db'
 
@@ -18,18 +18,13 @@ class database {
 export default class Config {
     // first item is the default locale
     private static readonly _locales = ['pl', 'uk', 'en'] satisfies Locale[]
-    // private static readonly _loggingLevel: LoggingLevel = 'DEBUG' // 'INFO' // DEBUG
-    private static readonly _loggingLevel: LoggingLevel = 'INFO'
+    static readonly loggerLevel: LoggerLevel = 'INFO'
 
     static get locales() {
         return this._locales.slice()
     }
 
-    static get loggingLevel() {
-        return this._loggingLevel
-    }
-
-    static get database() {
-        return database
+    static get dbPath() {
+        return DbConfig.path
     }
 }

@@ -3,7 +3,7 @@ import inquirer from 'inquirer'
 import * as path from 'path'
 import Config from './config'
 import { filePaths } from './constants'
-import Database from './db'
+import { db } from './db'
 import I18n from './i18n'
 import {
     getPermalinkFromFilename,
@@ -34,8 +34,6 @@ type SelectedItem = {
     imgImportFromPath: string | null
     imageAlreadyStored: boolean
 }
-
-const db = new Database()
 
 const prompt = inquirer.createPromptModule()
 
@@ -99,11 +97,11 @@ const findImageFileForMd = (
     return foundImage ?? null
 }
 
-async function confirm(
+function prepareItem(
     mdFile: MdFile,
     importAs: 'page' | 'recipe',
     imageFile: Omit<File, 'language'> | null
-): Promise<SelectedItem | null> {
+): SelectedItem {
     // TODO: type of return
     if (!imageFile) {
         logger.warn(`No matching image found for ${mdFile.name}`)
@@ -133,7 +131,7 @@ async function confirm(
     const pageAlreadyStored = false
     const imageAlreadyStored = false
 
-    const result: SelectedItem = {
+    const item: SelectedItem = {
         importAs,
         language: mdFile.language ?? null,
         heading,
@@ -147,9 +145,16 @@ async function confirm(
         imageAlreadyStored,
     }
 
-    logger.info('Result:', JSON.stringify(result, null, 2))
+    return item
+}
+
+async function confirm(
+    ...args: Parameters<typeof prepareItem>
+): Promise<ReturnType<typeof prepareItem> | null> {
+    const item = prepareItem(...args)
 
     // Prompt the user to confirm
+    logger.info('Result:', JSON.stringify(item, null, 2))
     const confirmation = await prompt([
         {
             type: 'list',
@@ -168,11 +173,12 @@ async function confirm(
         },
     ])
 
-    return confirmation.confirmationValue === true ? result : null
+    return confirmation.confirmationValue === true ? item : null
 }
 
 async function selectPageType(
-    pageType: 'page' | 'recipe'
+    pageType: 'page' | 'recipe',
+    autoMode: boolean
 ): Promise<SelectedItem[]> {
     const selected: SelectedItem[] = []
     const dir = pageType === 'page' ? filePaths.pagesDir : filePaths.recipesDir
@@ -191,25 +197,33 @@ async function selectPageType(
 
     logger.info(mdFiles)
     while (unprocessedCount && !done) {
+        const choices = mdFiles.map((file) => ({
+            name: file.name,
+            value: file,
+        }))
+
         // Prompt the user to select a markdown file
-        const answer = await prompt([
-            {
-                type: 'list',
-                name: 'selectedMdFile',
-                message: 'Select a markdown file:',
-                choices: mdFiles.map((file) => ({
-                    name: file.name,
-                    value: file,
-                })),
-            },
-        ])
+        const answer = autoMode
+            ? { selectedMdFile: choices[0].value }
+            : await prompt([
+                  {
+                      type: 'list',
+                      name: 'selectedMdFile',
+                      message: 'Select a markdown file:',
+                      choices,
+                  },
+              ])
 
         const selectedMdFile = answer.selectedMdFile as MdFile
 
         // Find the matching image file
+        logger.info({ selectedMdFile, path: selectedMdFile.path, jpgFiles })
         const imageFile = findImageFileForMd(selectedMdFile.path, jpgFiles)
 
-        const result = await confirm(selectedMdFile, pageType, imageFile)
+        const result = autoMode
+            ? prepareItem(selectedMdFile, pageType, imageFile)
+            : await confirm(selectedMdFile, pageType, imageFile)
+
         if (result) {
             selected.push(result)
             unprocessedCount--
@@ -220,13 +234,15 @@ async function selectPageType(
             mdFiles.splice(indexOfSelected, 1)
         }
 
-        const { selectMore } = await prompt([
-            {
-                type: 'input',
-                name: 'selectMore',
-                message: 'Select more?',
-            },
-        ])
+        const { selectMore } = autoMode
+            ? { selectMore: 'yes' }
+            : await prompt([
+                  {
+                      type: 'input',
+                      name: 'selectMore',
+                      message: 'Select more?',
+                  },
+              ])
 
         if (!selectMore.match(/^y/i)) {
             done = true
@@ -237,14 +253,14 @@ async function selectPageType(
 }
 
 // Main function to run the script
-const main = async (_auto = false) => {
+const main = async (auto: boolean) => {
     // TODO: use `auto` to autoselect all files in non-interactive mode
 
     // 1. import recipes
-    const recipes = await selectPageType('recipe')
+    const recipes = await selectPageType('recipe', auto)
 
     // 2. import pages
-    const pages = await selectPageType('page')
+    const pages = await selectPageType('page', auto)
 
     // 3. convert to a map permalink->language->content
     const content: ContentType = {}
@@ -300,4 +316,7 @@ const main = async (_auto = false) => {
 }
 
 // Run the script
-main().catch((error) => logger.error(error))
+const autoMode = !!process.argv
+    .slice(2)
+    .find((option) => option.match(/auto$/i))
+main(autoMode).catch((error) => logger.error(error))

@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
 
-import I18n from '~src/i18n'
 import Config from '~src/config'
+import I18n from '~src/i18n'
 
 function getHeaders(request: NextRequest): Record<string, string> {
     const headers: Record<string, string> = {}
@@ -27,7 +27,8 @@ export function middleware(request: NextRequest) {
             '/favicon.ico',
             '/.well-known/security.txt',
             '/.well-known/pgp-public.asc',
-        ].includes(pathname)
+        ].includes(pathname) ||
+        pathname.startsWith('/img')
     ) {
         return
     }

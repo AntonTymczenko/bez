@@ -1,74 +1,60 @@
-'use client'
-
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import React, { memo, useCallback, useEffect, useState } from 'react'
-import { type Locale } from '~src/types'
-
-type LocaleSwitcherProps = {
-    current: Locale
-    locales: [Locale, string][]
-    path?: string
-}
+import React from 'react'
+import Config from '~src/config'
+import { db } from '~src/db'
+import I18n from '~src/i18n'
+import { type HeaderNavigationProps, type Locale } from '~src/types'
 
 type Flag = string
 type Href = string
 type LinksState = [Locale, Flag, Href]
 
-function LocaleSwitcher(props: LocaleSwitcherProps) {
-    const { current, locales } = props
-    const path = usePathname()
+const locales = new I18n(Config.locales).getLocalesWithFlags()
 
-    const redirectedPathName = useCallback(
-        (locale: Locale) => {
-            const segments = (path ?? '/').split('/')
-            segments[1] = locale
-            return segments.join('/')
-        },
-        [path]
+export default async function LocaleSwitcher(props: HeaderNavigationProps) {
+    const { currentLocale, path, dbPath } = props
+
+    const pathWithLocale = (locale: Locale) => {
+        const segments = path.split('/')
+        segments[1] = locale
+        return segments.join('/')
+    }
+
+    const links = locales.map(
+        ([locale, flag]) =>
+            [
+                locale,
+                flag,
+                locale === currentLocale ? path : pathWithLocale(locale),
+            ] as LinksState
     )
-    const [links, setLinks] = useState<LinksState[]>(
-        locales.map(
-            ([locale, flag]) =>
-                [
-                    locale,
-                    flag,
-                    locale === current ? path : redirectedPathName(locale),
-                ] as LinksState
+
+    const validated = await Promise.all(
+        links.map(([locale]) =>
+            locale === currentLocale
+                ? true
+                : db
+                      .getPageTitle(dbPath, locale)
+                      .then((response) => {
+                          return response !== null
+                      })
+                      .catch(() => false)
         )
     )
 
-    useEffect(() => {
-        Promise.all(
-            links.map((linkState) =>
-                linkState[0] === current
-                    ? true
-                    : fetch(linkState[2], { method: 'HEAD' })
-                          .then((response) => response.status !== 404)
-                          .catch(() => false)
-            )
-        ).then((validIndexes) => {
-            if (validIndexes.every((x) => x === true)) {
-                return
+    if (!validated.every((x) => x === true)) {
+        validated.forEach((isValid, index) => {
+            if (!isValid) {
+                links[index][2] = `/${links[index][0]}` // change URL to home
             }
-
-            const updatedLinks: LinksState[] = []
-
-            validIndexes.forEach((valid, index) => {
-                if (valid) {
-                    updatedLinks.push(links[index])
-                }
-            })
-
-            setLinks(updatedLinks)
         })
-    }, [path, current, locales])
+    }
 
     return (
         <div className="locale-switcher">
             {links.map(([locale, flag, href]) => (
                 <React.Fragment key={locale}>
-                    {locale === current ? (
+                    {locale === currentLocale ? (
                         <span>{flag}</span>
                     ) : (
                         <Link href={href}>{flag}</Link>
@@ -78,5 +64,3 @@ function LocaleSwitcher(props: LocaleSwitcherProps) {
         </div>
     )
 }
-
-export default memo(LocaleSwitcher)

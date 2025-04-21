@@ -1,13 +1,14 @@
-import React from 'react'
 import Link from 'next/link'
-import type { Locale } from '~src/types'
+import type { HeaderNavigationProps } from '~src/types'
+import LocaleSwitcher from './locale-switcher'
 
-export default function HeaderNavigation(props: { lang: Locale }) {
-    const { lang } = props
+export default function HeaderNavigation(props: HeaderNavigationProps) {
+    const { currentLocale } = props
 
     return (
         <div className="header-navigation">
-            <Link href={lang ? `/${lang}/` : '/'}>🏠</Link>
+            <Link href={`/${currentLocale}/`}>🏠</Link>
+            <LocaleSwitcher {...props} />
         </div>
     )
 }

@@ -1,11 +1,14 @@
 import * as fs from 'fs'
-import DatabaseCommon from './db-common'
+import Config from './config'
+import DatabaseBase from './db-base'
 import markdownToHtml from './md-to-html'
 import type {
     CollectionBaseType,
     ContentType,
+    DatabaseOptions,
     Locale,
     PageContentFace,
+    PageList,
 } from './types'
 
 type ImageEntry = {
@@ -45,14 +48,9 @@ export type CollectionsMap = {
 export type CollectionName = keyof CollectionsMap
 export type Collection<Name extends CollectionName> = CollectionsMap[Name]
 
-export default class Database extends DatabaseCommon {
-    constructor() {
-        super()
-    }
-
-    protected async initDatabase() {
-        this.initDatabaseWrapper([
-            `CREATE TABLE IF NOT EXISTS pages (
+class Database extends DatabaseBase {
+    protected tables = [
+        `CREATE TABLE IF NOT EXISTS pages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 path TEXT NOT NULL,
                 locale TEXT NOT NULL,
@@ -61,17 +59,20 @@ export default class Database extends DatabaseCommon {
                 image_id INTEGER,
                 FOREIGN KEY (image_id) REFERENCES images (id) ON DELETE SET NULL
             )`,
-            `CREATE TABLE IF NOT EXISTS images (
+        `CREATE TABLE IF NOT EXISTS images (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 permalink TEXT NOT NULL,
                 data BLOB NOT NULL
             )`,
-            `CREATE TABLE IF NOT EXISTS migrations (
+        `CREATE TABLE IF NOT EXISTS migrations (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 date TEXT NOT NULL,
                 hash TEXT NOT NULL
             )`,
-        ])
+    ]
+
+    constructor(options: DatabaseOptions) {
+        super(options)
     }
 
     private async insertPage(
@@ -94,11 +95,18 @@ export default class Database extends DatabaseCommon {
         path: string,
         languageCode: Locale
     ): Promise<PageContentFace | null> {
-        this.logger.info('getPage', { path, languageCode })
         const page = await this.getOne({
             collection: 'pages',
-            query: `WHERE path = "${path}" AND locale = "${languageCode}"`,
+            query: `WHERE id IN (
+                    SELECT MAX(id)
+                    FROM pages
+                    WHERE path = "${path}"
+                    AND locale = "${languageCode}"
+                    GROUP BY path
+                )`,
         })
+
+        this.logger.debug('getPage', { path, languageCode })
 
         if (!page) {
             this.logger.verbose('getPage: no page')
@@ -120,7 +128,7 @@ export default class Database extends DatabaseCommon {
         path: string,
         languageCode: Locale
     ): Promise<PageContentFace['heading'] | null> {
-        this.logger.info('getPageTitle', { path, languageCode })
+        this.logger.debug('getPageTitle', { path, languageCode })
         const page = await this.getOne({
             collection: 'pages',
             query: `WHERE path = "${path}" AND locale = "${languageCode}"`,
@@ -130,18 +138,29 @@ export default class Database extends DatabaseCommon {
         return page?.heading ?? null
     }
 
-    async getRecipes(
+    async getRecipes(languageCode: Locale, limit = 10): Promise<PageList> {
+        return this.getPages(languageCode, 'recipe', limit)
+    }
+
+    async getArticles(languageCode: Locale, limit = 10): Promise<PageList> {
+        return this.getPages(languageCode, 'article', limit)
+    }
+
+    async getPages(
         languageCode: Locale,
-        limit = 10
+        type: 'recipe' | 'article',
+        limit: number
     ): Promise<(Omit<PageContentFace, 'body'> & { url: string })[]> {
-        this.logger.info('getRecipes', { languageCode, limit })
+        const isArticle = type === 'article'
+
         const pages = await this.get({
             collection: 'pages',
             query: `
                 WHERE id IN (
                     SELECT MAX(id)
                     FROM pages
-                    WHERE path LIKE "/recipe/%" AND locale = "${languageCode}"
+                    WHERE path ${isArticle ? 'NOT ' : ''}LIKE "/recipe/%"${isArticle ? ' AND path != "/"' : ''}
+                    AND locale = "${languageCode}"
                     GROUP BY path
                 )
             `,
@@ -150,7 +169,11 @@ export default class Database extends DatabaseCommon {
             attributes: ['heading', 'path', 'image_id'],
         })
 
-        return (pages ?? []).map((page) => ({
+        const result = pages ?? []
+
+        this.logger.debug('getPages', { languageCode, type, limit, result })
+
+        return result.map((page) => ({
             heading: page.heading,
             url: `${languageCode}${page.path}`,
             imageId: page.image_id,
@@ -203,10 +226,10 @@ export default class Database extends DatabaseCommon {
         }
     }
 
-    async getImageData(permalink: string): Promise<null | Buffer> {
+    async getImageData(id: number): Promise<null | Buffer> {
         const image = await this.getOne({
             collection: 'images',
-            query: `permalink = "${permalink}"`,
+            query: `WHERE id = ${id}`,
         })
 
         if (!image) {
@@ -266,3 +289,5 @@ export default class Database extends DatabaseCommon {
         )
     }
 }
+
+export const db = new Database(Config)

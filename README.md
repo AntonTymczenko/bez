@@ -38,9 +38,11 @@ Run `npm run build && npm start`
 
 ## Planning
 
+- [x] make sure the titles of pages are set according to the H1 of the page
 - [x] recognize 2 types of MD file (page, recipe) automatically
-- [ ] check if that permalink is already in the DB and mark with a checkmark
-- [ ] group all recipe's languages as one item to select
-- [ ] store confirmed page and its image to the DB. Re-use the same image across all locales
-- [ ] make sure the titles of pages are set according to the H1 of the page
+- [ ] yarn page
+    - [ ] check if that permalink is already in the DB and mark with a checkmark
+    - [ ] group all recipe's languages as one item to select
+    - [ ] store confirmed page and its image to the DB. Re-use the same image across all locales
+- [ ] add sufix '...| MAIN SITE TITLE' to titles of all pages
 - [ ] VERBOSE env var and any other vars should be passed as a config object
