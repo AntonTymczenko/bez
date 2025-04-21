@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import HeaderNavigation from '~src/components/header-navigation'
+import Markdown from '~src/components/markdown'
 import { db } from '~src/db'
 import type { PageParamsLang } from '~src/types'
 
@@ -15,10 +16,7 @@ export default async function PageWithLocale(props: PageParamsLang) {
     if (!content) {
         return notFound()
     }
-    const { heading, body, imageId } = content
-
-    const articles = await db.getArticles(lang)
-    const recipes = await db.getRecipes(lang)
+    const { heading, imageId, markdown } = content
 
     return (
         <>
@@ -34,40 +32,10 @@ export default async function PageWithLocale(props: PageParamsLang) {
                     <h1>
                         <Link href={dbPath}>{heading}</Link>
                     </h1>
-                    {body && (
-                        <main dangerouslySetInnerHTML={{ __html: body }}></main>
-                    )}
                     {imageId && (
                         <img src={`/img/${imageId}`} width="100" height="100" />
                     )}
-                    {!!articles.length && (
-                        <>
-                            <p>Articles:</p>
-                            <ul>
-                                {articles.map((article) => (
-                                    <li key={article.url}>
-                                        <Link href={article.url}>
-                                            {article.heading}
-                                        </Link>
-                                    </li>
-                                ))}
-                            </ul>
-                        </>
-                    )}
-                    {!!recipes.length && (
-                        <>
-                            <p>Recipes:</p>
-                            <ul>
-                                {recipes.map((recipe) => (
-                                    <li key={recipe.url}>
-                                        <Link href={recipe.url}>
-                                            {recipe.heading}
-                                        </Link>
-                                    </li>
-                                ))}
-                            </ul>
-                        </>
-                    )}
+                    <Markdown lang={lang} markdown={markdown} />
                 </div>
             </div>
         </>

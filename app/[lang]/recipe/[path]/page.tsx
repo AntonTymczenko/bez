@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import HeaderNavigation from '~src/components/header-navigation'
+import Markdown from '~src/components/markdown'
 import { db } from '~src/db'
 import type { PageParams } from '~src/types'
 
@@ -10,7 +11,7 @@ export default async function PageWithLocale(props: PageParams) {
     if (!content) {
         return notFound()
     }
-    const { heading, body, imageId } = content
+    const { heading, markdown, imageId } = content
 
     const fullPath = `/${lang}/recipe/${path}`
 
@@ -31,9 +32,7 @@ export default async function PageWithLocale(props: PageParams) {
                 {imageId && (
                     <img src={`/img/${imageId}`} width="100" height="100" />
                 )}
-                {body && (
-                    <main dangerouslySetInnerHTML={{ __html: body }}></main>
-                )}
+                <Markdown lang={lang} markdown={markdown} />
             </article>
         </>
     )

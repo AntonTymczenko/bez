@@ -12,11 +12,7 @@ export type PageContent = {
     imageId: number | null // foreign key
 }
 
-export type PageContentFace = Omit<PageContent, 'markdown'> & {
-    body: string // HTML based on the markdown, but without H1
-}
-
-export type PageList = (Omit<PageContentFace, 'body'> & { url: string })[]
+export type PageList = (Omit<PageContent, 'markdown'> & { url: string })[]
 
 export type ContentType = Record<string, Record<Locale, PageContent>>
 

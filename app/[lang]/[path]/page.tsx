@@ -1,12 +1,13 @@
 import { notFound } from 'next/navigation'
 import HeaderNavigation from '~src/components/header-navigation'
+import Markdown from '~src/components/markdown'
 import { db } from '~src/db'
-import type { PageContentFace, PageParams } from '~src/types'
+import type { PageContent, PageParams } from '~src/types'
 
 export { generateMetadata } from '~app/generate-metadata'
 
 export default async function ArticlePageConent(
-    props: PageContentFace & PageParams
+    props: PageContent & PageParams
 ) {
     const { lang, path } = await props.params
 
@@ -15,7 +16,7 @@ export default async function ArticlePageConent(
     if (!content) {
         return notFound()
     }
-    const { heading, body, imageId } = content
+    const { heading, markdown, imageId } = content
     const fullPath = `/${lang}/${path}`
 
     return (
@@ -35,9 +36,7 @@ export default async function ArticlePageConent(
                     {imageId && (
                         <img src={`/img/${imageId}`} width="100" height="100" />
                     )}
-                    {body && (
-                        <main dangerouslySetInnerHTML={{ __html: body }}></main>
-                    )}
+                    <Markdown lang={lang} markdown={markdown} />
                 </div>
             </div>
         </>

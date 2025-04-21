@@ -1,11 +1,5 @@
-import createDOMPurify from 'dompurify'
-import { JSDOM } from 'jsdom'
-import { marked } from 'marked'
 import fs from 'fs'
 import { slugify } from 'transliteration'
-
-const window = new JSDOM('').window
-const DOMPurify = createDOMPurify(window)
 
 export const readTextFile = (fullPath: string): string => {
     return fs.readFileSync(fullPath, 'utf-8')
@@ -29,22 +23,4 @@ export function getPermalinkFromFilename(filename: string): string {
         .replace(/\s+/g, '-') // Replace spaces with dashes
         .replace(/-+/g, '-') // Merge multiple dashes
         .replace(/^-|-$/g, '') // Trim leading and trailing dashes
-}
-
-/**
- *
- * @param markdown
- * @returns HTML body without H1
- */
-export default async function markdownToHtml(
-    markdown: string = ''
-): Promise<string> {
-    const html = await marked.parse(
-        markdown.replace(/^[\u200B\u200C\u200D\u200E\u200F\uFEFF]/, '')
-    )
-    const clean = DOMPurify.sanitize(html)
-
-    const body = clean.replace(/<h1>.*<\/h1>\n/m, '')
-
-    return body
 }

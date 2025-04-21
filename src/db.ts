@@ -1,13 +1,12 @@
 import * as fs from 'fs'
 import Config from './config'
 import DatabaseBase from './db-base'
-import markdownToHtml from './md-to-html'
 import type {
     CollectionBaseType,
     ContentType,
     DatabaseOptions,
     Locale,
-    PageContentFace,
+    PageContent,
     PageList,
 } from './types'
 
@@ -94,7 +93,7 @@ class Database extends DatabaseBase {
     async getPage(
         path: string,
         languageCode: Locale
-    ): Promise<PageContentFace | null> {
+    ): Promise<PageContent | null> {
         const page = await this.getOne({
             collection: 'pages',
             query: `WHERE id IN (
@@ -113,11 +112,11 @@ class Database extends DatabaseBase {
             return null
         }
 
-        const body = await markdownToHtml(page.body)
+        // const body = await markdownToHtml(page.body, languageCode)
 
-        const content: PageContentFace = {
+        const content: PageContent = {
             heading: page.heading,
-            body,
+            markdown: page.body,
             imageId: page.image_id,
         }
 
@@ -127,7 +126,7 @@ class Database extends DatabaseBase {
     async getPageTitle(
         path: string,
         languageCode: Locale
-    ): Promise<PageContentFace['heading'] | null> {
+    ): Promise<PageContent['heading'] | null> {
         this.logger.debug('getPageTitle', { path, languageCode })
         const page = await this.getOne({
             collection: 'pages',
@@ -150,7 +149,7 @@ class Database extends DatabaseBase {
         languageCode: Locale,
         type: 'recipe' | 'article',
         limit: number
-    ): Promise<(Omit<PageContentFace, 'body'> & { url: string })[]> {
+    ): Promise<(Omit<PageContent, 'markdown'> & { url: string })[]> {
         const isArticle = type === 'article'
 
         const pages = await this.get({
