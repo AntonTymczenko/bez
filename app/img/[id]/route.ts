@@ -23,7 +23,6 @@ export async function GET(
 ) {
     try {
         const { id } = await params
-        console.log({ id })
         const validatedId = schema.validate(Number.parseInt(id, 10))
 
         if (validatedId.error) {

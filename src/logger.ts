@@ -8,14 +8,10 @@ const INFO_THRESHOLD = new Set<LoggerLevel>(['INFO', ...DEBUG_THRESHOLD])
 
 export default class Logger {
     private readonly moduleName: string
-    private readonly bus: typeof console
+    private readonly bus: Console
     private readonly level: LoggerLevel
 
-    constructor(
-        moduleName: string,
-        level: LoggerLevel,
-        bus: typeof console = console
-    ) {
+    constructor(moduleName: string, level: LoggerLevel, bus = console) {
         this.moduleName = moduleName
         this.bus = bus
         this.level = level

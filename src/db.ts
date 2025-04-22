@@ -33,16 +33,10 @@ type CollectionUser = CollectionBaseType & {
     name: string
 }
 
-type CollectionMigration = CollectionBaseType & {
-    date: string // Store date in ISO 8601 format
-    hash: string
-}
-
 export type CollectionsMap = {
     pages: CollectionPage
     images: CollectionImage
     users: CollectionUser
-    migrations: CollectionMigration
 }
 
 export type CollectionName = keyof CollectionsMap
@@ -63,11 +57,6 @@ class Database extends DatabaseBase {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 permalink TEXT NOT NULL,
                 data BLOB NOT NULL
-            )`,
-        `CREATE TABLE IF NOT EXISTS migrations (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                date TEXT NOT NULL,
-                hash TEXT NOT NULL
             )`,
     ]
 
@@ -113,8 +102,6 @@ class Database extends DatabaseBase {
             return null
         }
 
-        // const body = await markdownToHtml(page.body, languageCode)
-
         const content: PageContent = {
             heading: page.heading,
             markdown: page.body,
@@ -146,7 +133,7 @@ class Database extends DatabaseBase {
         return this.getPages(languageCode, 'article', limit)
     }
 
-    async getPages(
+    private async getPages(
         languageCode: Locale,
         type: 'recipe' | 'article',
         limit: number
@@ -178,6 +165,46 @@ class Database extends DatabaseBase {
             url: `${languageCode}${page.path}`,
             imageId: page.image_id,
         }))
+    }
+
+    async getPagesOverall(
+        type: 'recipe' | 'article' | 'both',
+        limit: number,
+        offset: number
+    ): Promise<{
+        data: { id: CollectionPage['id']; permalink: string }[]
+        count: number
+    }> {
+        const query = `WHERE path ${type === 'article' ? 'NOT ' : ''} LIKE "/recipe/%"`
+
+        const count = await this.count({
+            collection: 'pages',
+            ...(type !== 'both' && { query }),
+        })
+        const pages = await this.get({
+            collection: 'pages',
+            ...(type !== 'both' && { query }),
+            limit,
+            offset,
+            order: [
+                ['locale', 1],
+                ['path', 1],
+                ['id', -1],
+            ],
+            attributes: ['id', 'path', 'locale'],
+        })
+
+        return {
+            data: pages.map((page) => ({
+                id: page.id,
+                permalink: `/${page.locale}${page.path}`,
+            })),
+            count,
+        }
+    }
+
+    async removePages(ids: number[]): Promise<void> {
+        await this.removeByIds('pages', ids)
     }
 
     async insertImage(image: ImageEntry): Promise<number> {
@@ -246,10 +273,6 @@ class Database extends DatabaseBase {
             '---------------------------CONTENT to populate -----------------\n',
             content
         )
-
-        if (!this._db) {
-            throw new Error('No Database to populate into')
-        }
 
         const db = await this.db
 

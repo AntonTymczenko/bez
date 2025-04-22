@@ -32,7 +32,7 @@ type SelectedItem = {
 
 export class ContentAdmin {
     private readonly logger: Logger
-    private readonly prompt: ReturnType<typeof inquirer.createPromptModule>
+    private readonly prompt: ReturnType<typeof inquirer.createPromptModule<{}>>
     private readonly autoMode: boolean
 
     constructor(auto: boolean) {
@@ -94,7 +94,61 @@ export class ContentAdmin {
     }
 
     async remove(): Promise<void> {
-        throw new Error('Not implemented yet')
+        const { pageType } = await this.prompt([
+            {
+                type: 'list',
+                name: 'pageType',
+                message: `Select type:`,
+                choices: [
+                    {
+                        name: 'Articles',
+                        value: 'article',
+                    },
+                    {
+                        name: 'Recipes',
+                        value: 'recipe',
+                    },
+                ],
+            },
+        ])
+
+        let page = 0
+        let pages = Infinity
+        const limit = 10
+        let selected: { id: number; permalink: string }[] = []
+
+        while (pages > page) {
+            const res = await db.getPagesOverall(pageType, limit, limit * page)
+            page++
+            pages = Math.ceil(res.count / limit)
+
+            const { choice } = await this.prompt([
+                {
+                    type: 'checkbox',
+                    pageSize: limit,
+                    name: 'choice',
+                    message: `Select ${pageType}s (page ${page}/${pages}):`,
+                    choices: res.data.map((item) => ({
+                        name: JSON.stringify(item),
+                        value: item,
+                    })),
+                },
+            ])
+
+            selected.push(...choice)
+        }
+
+        if (!selected.length) {
+            return
+        }
+
+        const confirmed = await this.confirm(
+            `Remove these pages?\n${selected.map((i) => JSON.stringify(i)).join('\n')}`
+        )
+
+        if (confirmed) {
+            await db.removePages(selected.map(({ id }) => id))
+        }
     }
 
     private readTextFile(fullPath: string): string {
@@ -274,7 +328,7 @@ export class ContentAdmin {
             }))
 
             // Prompt the user to select a markdown file
-            const selectedItems = this.autoMode
+            const { selectedFiles } = this.autoMode
                 ? { selectedFiles: mdFiles }
                 : await this.prompt([
                       {
@@ -285,7 +339,7 @@ export class ContentAdmin {
                       },
                   ])
 
-            const selectedMdFiles = selectedItems.selectedFiles as MdFile[]
+            const selectedMdFiles = selectedFiles as MdFile[]
 
             const items = await Promise.all(
                 selectedMdFiles.map(
@@ -298,45 +352,53 @@ export class ContentAdmin {
                 )
             )
 
-            const confirmedItems = this.autoMode
-                ? items
-                : await this.prompt([
-                      {
-                          type: 'list',
-                          name: 'confirmationValue',
-                          message: `${JSON.stringify(items, null, 4)}\nDo you confirm importing these ${pageType}s?`,
-                          choices: [
-                              {
-                                  name: 'OK',
-                                  value: true,
-                              },
-                              {
-                                  name: 'Cancel',
-                                  value: false,
-                              },
-                          ],
-                      },
-                  ]).then((confirmation) => {
-                      const confirmed = confirmation.confirmationValue
-                      if (confirmed) {
-                          done = true
-                      }
-                      return confirmed ? items : null
-                  })
+            let confirmed = false
 
-            if (confirmedItems) {
-                selected.push(...confirmedItems)
-                unprocessedCount -= confirmedItems.length
+            if (this.autoMode) {
+                confirmed = true
+            } else {
+                confirmed = await this.confirm(
+                    `${JSON.stringify(items, null, 4)}\nDo you confirm importing these ${pageType}s?`
+                )
+            }
 
-                const indexesOfSelected = confirmedItems.map((item) =>
+            if (confirmed) {
+                selected.push(...items)
+                unprocessedCount -= items.length
+
+                const indexesOfSelected = items.map((item) =>
                     mdFiles.findIndex((file) => file.path === item.origin)
                 )
                 indexesOfSelected.reverse().forEach((index) => {
                     mdFiles.splice(index, 1)
                 })
+
+                done = true
             }
         }
 
         return selected
+    }
+
+    private async confirm(message: string): Promise<boolean> {
+        const { ok } = await this.prompt([
+            {
+                type: 'list',
+                name: 'ok',
+                message,
+                choices: [
+                    {
+                        name: 'OK',
+                        value: true,
+                    },
+                    {
+                        name: 'Cancel',
+                        value: false,
+                    },
+                ],
+            },
+        ])
+
+        return ok
     }
 }

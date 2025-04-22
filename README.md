@@ -53,8 +53,9 @@ Run `npm run build && npm start`
     - [x] in autoMode do not show the data that needs to be confirmed in manual mode
     - [x] check if that permalink is already in the DB and mark with a checkmark
     - [-] group all recipe's languages as one item to select
+    - [x] support delete page/recipe feature
     - [ ] support importing examples in automode if nothing else is present in the `/content`
-    - [ ] support delete page/recipe feature
+    - [ ] support '--cleanup' flag to remove orphaned images
 - [ ] Don't use hardcoded values in the Config. read them from the .env file
 - [ ] Script for creating a local .env file; read those values to the Config.
       Check presence of the .env on `yarn start` and `yarn dev`

@@ -1,4 +1,4 @@
-import { ContentAdmin } from '~src/content-administrator'
+import { ContentAdmin } from '../src/content-admin'
 
 // Read the CLI options
 const args = process.argv.slice(2)

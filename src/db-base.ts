@@ -88,22 +88,33 @@ abstract class DatabaseBase {
     protected async get<Name extends CollectionName>(args: {
         collection: Name
         query?: string
-        order?: [string, number?]
+        order?: [string, number?] | [string, number?][]
         limit?: number
+        offset?: number
         attributes?: (keyof Collection<Name>)[]
     }): Promise<CollectionsMap[Name][]> {
         this.logger.verbose('get', args)
-        const { collection, query, order, limit, attributes } = args
+        const { collection, query, order, limit, offset, attributes } = args
         const db = await this.db
 
         const a = attributes?.length ? attributes.join(',') : '*'
         const q = query ? ` ${query}` : ''
-        const o = order
-            ? ` ORDER BY ${order[0]} ${order[1] === -1 ? 'DESC' : 'ASC'}`
-            : ''
-        const lim = limit ? ` LIMIT ${limit}` : ''
+        const o =
+            order === undefined
+                ? ''
+                : ` ORDER BY ${(
+                      (typeof order?.[1] === 'number' ? [order] : order) as [
+                          string,
+                          (number | undefined)?,
+                      ][]
+                  )
+                      .map((o) => `${o[0]} ${o[1] === -1 ? 'DESC' : 'ASC'}`)
+                      .join(', ')}`
 
-        const fullQuery = `SELECT ${a} FROM ${collection}${q}${o}${lim}`
+        const lim = limit ? ` LIMIT ${limit}` : ''
+        const off = offset ? ` OFFSET ${offset}` : ''
+
+        const fullQuery = `SELECT ${a} FROM ${collection}${q}${o}${lim}${off}`
 
         this.logger.trace('get', {
             query: fullQuery,
@@ -116,6 +127,28 @@ abstract class DatabaseBase {
         }
 
         return results
+    }
+
+    protected async count<Name extends CollectionName>(args: {
+        collection: Name
+        query?: string
+    }): Promise<number> {
+        this.logger.verbose('count', args)
+        const { collection, query } = args
+        const db = await this.db
+
+        let result = 0
+        const q = query ? ` ${query}` : ''
+        try {
+            const response = await db.get(
+                `SELECT COUNT(*) FROM ${collection}${q}`
+            )
+            result = response?.['COUNT(*)'] ?? 0
+        } catch (e) {
+            this.logger.error('count', e)
+        }
+
+        return result
     }
 
     protected async insertOne<Name extends CollectionName>(
@@ -138,6 +171,23 @@ abstract class DatabaseBase {
         )
 
         return res
+    }
+
+    protected async removeByIds<Name extends CollectionName>(
+        collection: Name,
+        ids: Collection<Name>['id'][]
+    ) {
+        const db = await this.db
+
+        const res = await db.run(
+            `DELETE FROM ${collection} WHERE id IN (${ids.join(',')})`
+        )
+
+        if (res.changes !== ids.length) {
+            throw new Error(
+                `Have not deleted all the requested IDs from ${collection}`
+            )
+        }
     }
 
     async close() {
