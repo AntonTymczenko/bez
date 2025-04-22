@@ -1,15 +1,11 @@
-import * as fs from 'fs'
+import fs from 'fs'
 import inquirer from 'inquirer'
-import * as path from 'path'
+import path from 'path'
+import { slugify } from 'transliteration'
 import Config from './config'
 import { filePaths } from './constants'
 import { db } from './db'
 import I18n from './i18n'
-import {
-    getPermalinkFromFilename,
-    readTextFile,
-    recognizeHeading,
-} from './md-to-html'
 import type { CollectionBaseType, ContentType, Locale } from './types'
 
 const logger = console
@@ -36,6 +32,33 @@ type SelectedItem = {
 }
 
 const prompt = inquirer.createPromptModule()
+
+const readTextFile = (fullPath: string): string => {
+    return fs.readFileSync(fullPath, 'utf-8')
+}
+
+function recognizeHeading(md: string): string {
+    const h1 = md.match(/^#\s+(.*)\n/m)
+
+    const heading = h1?.[1]
+
+    if (!heading) {
+        throw new Error('Cannot parse H1 heading in the markdown')
+    }
+
+    return heading
+}
+
+function getPermalinkFromFilename(filename: string): string {
+    const withoutExt = filename.replace(/\.\w{2-4}$/i, '')
+
+    return slugify(withoutExt)
+        .toLowerCase() // Convert to lowercase first
+        .replace(/[^a-z0-9\s-]/g, '') // Remove non-alphanumeric characters
+        .replace(/\s+/g, '-') // Replace spaces with dashes
+        .replace(/-+/g, '-') // Merge multiple dashes
+        .replace(/^-|-$/g, '') // Trim leading and trailing dashes
+}
 
 // Function to get all markdown and image files from a folder
 const getFiles = (dir: string) => {
