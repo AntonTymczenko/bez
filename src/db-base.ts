@@ -15,7 +15,7 @@ abstract class DatabaseBase {
 
     constructor(options: DatabaseOptions) {
         this.databaseFilepath = options.dbPath
-        this.logger = new Logger(options.loggerLevel)
+        this.logger = new Logger('DB', options.loggerLevel)
         if (options.loggerLevel === 'TRACE') {
             sqlite3.verbose()
         }

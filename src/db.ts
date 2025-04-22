@@ -24,6 +24,7 @@ type CollectionPage = CollectionBaseType & {
 }
 
 type CollectionImage = CollectionBaseType & {
+    // TODO: consider not storing the permalink, it is a denormalization ATM
     permalink: string
     data: Buffer
 }
@@ -241,10 +242,10 @@ class Database extends DatabaseBase {
     async populatePages(content: ContentType) {
         this.logger.verbose('populatePages', { content })
 
-        this.logger.info(
-            '---------------------------CONTENT to populate -----------------'
+        this.logger.debug(
+            '---------------------------CONTENT to populate -----------------\n',
+            content
         )
-        this.logger.info('', content)
 
         if (!this._db) {
             throw new Error('No Database to populate into')
@@ -278,8 +279,8 @@ class Database extends DatabaseBase {
                     await db.all<Collection<'pages'>[]>(fullQuery)
 
                 if (Array.isArray(existingPages) && existingPages[0]) {
-                    this.logger.info(
-                        `PopulatePages: Overwriting page "/${page[1]}${page[0]}" (${page[2]})`
+                    this.logger.warn(
+                        `New version of page "/${page[1]}${page[0]}" (${page[2]}) has been written`
                     )
                 }
 

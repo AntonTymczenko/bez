@@ -7,10 +7,16 @@ const DEBUG_THRESHOLD = new Set<LoggerLevel>(['DEBUG', ...VERBOSE_THRESHOLD])
 const INFO_THRESHOLD = new Set<LoggerLevel>(['INFO', ...DEBUG_THRESHOLD])
 
 export default class Logger {
+    private readonly moduleName: string
     private readonly bus: typeof console
     private readonly level: LoggerLevel
 
-    constructor(level: LoggerLevel, bus: typeof console = console) {
+    constructor(
+        moduleName: string,
+        level: LoggerLevel,
+        bus: typeof console = console
+    ) {
+        this.moduleName = moduleName
         this.bus = bus
         this.level = level
     }
@@ -39,13 +45,21 @@ export default class Logger {
         }
     }
 
+    warn(message: string) {
+        this.bus.warn(message)
+    }
+
     error(method: string, error: Error) {
-        this.bus.error(` DB.${method}`, error)
+        this.bus.error(`${this.moduleName}.${method}`, error)
+    }
+
+    fatal(...args: Parameters<typeof this.error>) {
+        this.error(...args)
     }
 
     private log(method: string, obj?: LoggedObject) {
         this.bus.log(
-            ` DB.${method}`,
+            `${this.moduleName}.${method}`,
             obj
                 ? JSON.stringify(
                       Object.fromEntries(
