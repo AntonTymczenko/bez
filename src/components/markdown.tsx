@@ -6,11 +6,12 @@ import { db } from '~src/db'
 import type { Locale } from '~src/types'
 import PagesList from './pages-list'
 
+type TemplateRenderer = (lang: Locale) => Promise<React.JSX.Element>
+
 const window = new JSDOM('').window
 const DOMPurify = createDOMPurify(window)
-const placeholderRegex = /({{[\w\d]+}})/g
 
-type TemplateRenderer = (lang: Locale) => Promise<React.JSX.Element>
+const placeholderRegex = /({{[\w\d]+}})/g
 
 const templateMap: Record<string, TemplateRenderer> = {
     '{{ArticlesList}}': async (lang) => {
@@ -35,7 +36,7 @@ export default async function Markdown(props: MarkdownProps) {
         .split(placeholderRegex)
 
     return (
-        <div>
+        <>
             {parts.map(async (part, i) => {
                 const trimmed = part.trim()
                 if (templateMap[trimmed]) {
@@ -46,12 +47,13 @@ export default async function Markdown(props: MarkdownProps) {
                 const html = await marked.parse(part)
                 const safeHtml = DOMPurify.sanitize(html)
 
-                const body = safeHtml.replace(/<h1>.*<\/h1>\n/m, '')
-
                 return (
-                    <div key={i} dangerouslySetInnerHTML={{ __html: body }} />
+                    <div
+                        key={i}
+                        dangerouslySetInnerHTML={{ __html: safeHtml }}
+                    />
                 )
             })}
-        </div>
+        </>
     )
 }

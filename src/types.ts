@@ -7,12 +7,15 @@ export const supportedLocales = {
 export type Locale = keyof typeof supportedLocales
 
 export type PageContent = {
-    heading: string // plain text that is used as a page title
-    markdown: string // markdown, whole page including H1
+    heading: string // plain text that is used as a page title and H1
+    markdown: string // markdown, whole page but without H1
     imageId: number | null // foreign key
 }
 
-export type PageList = (Omit<PageContent, 'markdown'> & { url: string })[]
+export type PageListed = Omit<PageContent, 'markdown'> & {
+    url: string
+    description?: string
+}
 
 export type ContentType = Record<string, Record<Locale, PageContent>>
 

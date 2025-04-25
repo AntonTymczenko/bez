@@ -25,6 +25,7 @@ type SelectedItem = {
     pageAlreadyStored: boolean
     markdown: string
     origin: File['path']
+    // FIXME: img alt will be gotten from the page's heading
     imgPermalink: string | null
     imgImportFromPath: string | null
     imageAlreadyStored: boolean
@@ -32,7 +33,11 @@ type SelectedItem = {
 
 export class ContentAdmin {
     private readonly logger: Logger
-    private readonly prompt: ReturnType<typeof inquirer.createPromptModule<{}>>
+    private readonly prompt: ReturnType<
+        typeof inquirer.createPromptModule<
+            Record<string, Record<string, unknown>>
+        >
+    >
     private readonly autoMode: boolean
 
     constructor(auto: boolean) {
@@ -115,7 +120,8 @@ export class ContentAdmin {
         let page = 0
         let pages = Infinity
         const limit = 10
-        let selected: { id: number; permalink: string }[] = []
+
+        const selected: { id: number; permalink: string }[] = []
 
         while (pages > page) {
             const res = await db.getPagesOverall(pageType, limit, limit * page)
@@ -275,14 +281,14 @@ export class ContentAdmin {
             ? `${imageFile.permalink}${imgExtension}`
             : null
 
-        // TODO: aquire from DB
         const pageAlreadyStored = !!(await db.getPageTitle(
             permalink,
             mdFile.language
         ))
-        const imageAlreadyStored = !!(
-            await db.getPage(permalink, mdFile.language)
-        )?.imageId
+        const imageAlreadyStored = !!(await db.getPageImageId(
+            permalink,
+            mdFile.language
+        ))
 
         const item: SelectedItem = {
             importAs,
@@ -292,7 +298,6 @@ export class ContentAdmin {
             pageAlreadyStored,
             markdown: markdownContent,
             origin: mdFile.path,
-            // TODO: img alt will be gotten from the page's heading
             imgPermalink,
             imgImportFromPath: imageFile?.path ?? null,
             imageAlreadyStored,

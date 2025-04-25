@@ -1,13 +1,14 @@
 import * as fs from 'fs'
 import Config from './config'
 import DatabaseBase from './db-base'
+import { parseDescription } from './helpers'
 import type {
     CollectionBaseType,
     ContentType,
     DatabaseOptions,
     Locale,
     PageContent,
-    PageList,
+    PageListed,
 } from './types'
 
 type ImageEntry = {
@@ -102,9 +103,11 @@ class Database extends DatabaseBase {
             return null
         }
 
+        const body = page.body.replace(/^(?:\s*\r?\n)*#[^\#].*(?:\r?\n)?/, '')
+
         const content: PageContent = {
             heading: page.heading,
-            markdown: page.body,
+            markdown: body,
             imageId: page.image_id,
         }
 
@@ -115,21 +118,36 @@ class Database extends DatabaseBase {
         path: string,
         languageCode: Locale
     ): Promise<PageContent['heading'] | null> {
-        this.logger.debug('getPageTitle', { path, languageCode })
+        return this.getPageAttribute('heading', path, languageCode)
+    }
+
+    async getPageImageId(
+        path: string,
+        languageCode: Locale
+    ): Promise<PageContent['imageId'] | null> {
+        return this.getPageAttribute('image_id', path, languageCode)
+    }
+
+    private async getPageAttribute<A extends keyof Collection<'pages'>>(
+        attribute: A,
+        path: string,
+        languageCode: Locale
+    ): Promise<Collection<'pages'>[A] | null> {
+        this.logger.debug('getPageAttribute', { attribute, path, languageCode })
         const page = await this.getOne({
             collection: 'pages',
             query: `WHERE path = "${path}" AND locale = "${languageCode}"`,
-            attributes: ['heading'],
+            attributes: [attribute],
         })
 
-        return page?.heading ?? null
+        return page?.[attribute] ?? null
     }
 
-    async getRecipes(languageCode: Locale, limit = 10): Promise<PageList> {
+    async getRecipes(languageCode: Locale, limit = 10): Promise<PageListed[]> {
         return this.getPages(languageCode, 'recipe', limit)
     }
 
-    async getArticles(languageCode: Locale, limit = 10): Promise<PageList> {
+    async getArticles(languageCode: Locale, limit = 10): Promise<PageListed[]> {
         return this.getPages(languageCode, 'article', limit)
     }
 
@@ -137,7 +155,7 @@ class Database extends DatabaseBase {
         languageCode: Locale,
         type: 'recipe' | 'article',
         limit: number
-    ): Promise<(Omit<PageContent, 'markdown'> & { url: string })[]> {
+    ): Promise<PageListed[]> {
         const isArticle = type === 'article'
 
         const pages = await this.get({
@@ -153,7 +171,7 @@ class Database extends DatabaseBase {
             `,
             limit,
             order: ['id', -1],
-            attributes: ['heading', 'path', 'image_id'],
+            attributes: ['heading', 'path', 'image_id', 'body'],
         })
 
         const result = pages ?? []
@@ -164,6 +182,9 @@ class Database extends DatabaseBase {
             heading: page.heading,
             url: `${languageCode}${page.path}`,
             imageId: page.image_id,
+            ...(type === 'recipe'
+                ? { description: parseDescription(page.body) ?? undefined }
+                : {}),
         }))
     }
 

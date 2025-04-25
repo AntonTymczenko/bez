@@ -1,7 +1,7 @@
 import Link from 'next/link'
-import type { PageList } from '~src/types'
+import type { PageListed } from '~src/types'
 
-export default function PagesList(props: { list: PageList }) {
+export default function PagesList(props: { list: PageListed[] }) {
     return !!props.list.length ? (
         <ul>
             {props.list.map((page) => (

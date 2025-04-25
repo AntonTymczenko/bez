@@ -8,3 +8,10 @@ export function pick(
               Object.entries(object).filter(([key]) => paths.includes(key))
           )
 }
+
+export function parseDescription(markdown: string): string | null {
+    // first paragraph after the H1 is the description
+    const matched = markdown.match(/^# .+\n+([\s\S]+?)(?=\n+|^#|$)/m)
+
+    return matched?.[1] ?? null
+}

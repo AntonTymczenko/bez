@@ -48,20 +48,31 @@ Run `npm run build && npm start`
 - [x] make sure the titles of pages are set according to the H1 of the page
 - [x] recognize 2 types of MD file (page, recipe) automatically
 - [x] fix Home page. Translate names of the sections
-- [ ] `yarn admin` command
+- [x] `yarn admin` command
     - [x] store confirmed page and its image to the DB. Re-use the same image across all locales
     - [x] in autoMode do not show the data that needs to be confirmed in manual mode
     - [x] check if that permalink is already in the DB and mark with a checkmark
     - [-] group all recipe's languages as one item to select
     - [x] support delete page/recipe feature
-    - [ ] support importing examples in automode if nothing else is present in the `/content`
-    - [ ] support '--cleanup' flag to remove orphaned images
-- [ ] Don't use hardcoded values in the Config. read them from the .env file
-- [ ] Script for creating a local .env file; read those values to the Config.
-      Check presence of the .env on `yarn start` and `yarn dev`
+- [x] Create home page layout
+- [x] Distinguish first paragraph as a recipe's description
+- [ ] DB get - change type according to the attributes
+- [ ] Create layout for articles
+- [ ] Create layout for recipes
+- [ ] On image import, crop and resize
+- [ ] Use cache for page titles
+- [ ] Use cache for recipe descriptions
+- [ ] Use recipe descriptions as meta descriptions in the page's meta
 - [ ] Add sufix '...| MAIN SITE TITLE' to titles of all pages
-- [ ] VERBOSE env var and any other vars should be passed as a config object
-- [ ] Create layout for pages
+- [ ] move lang selector to the left. show only one. unfold list on click
+- [ ] new setup
+    - [ ] `yarn admin` command
+        - [ ] support importing examples in automode if nothing else is present in the `/content`
+        - [ ] support '--cleanup' flag to remove orphaned images
+    - [ ] VERBOSE/INFO/DEBUG env var and any other vars should be passed as a config object
+    - [ ] Don't use hardcoded values in the Config. read them from the .env file
+    - [ ] Script for creating a local .env file. Check presence of the .env on `yarn start` and `yarn dev`
+    - [ ] autopopulate the `/public/.well-known`
 - [ ] Open fullscreen image on click
 - [ ] Macros and calories calculator
 - [ ] Portion +/- calculator

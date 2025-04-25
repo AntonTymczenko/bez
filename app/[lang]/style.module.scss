@@ -1,0 +1,131 @@
+$bg-light: #f9f9f9;
+$text-muted: #555;
+
+.container {
+    display: grid;
+    grid-template-columns: 3fr 1fr;
+    gap: 2rem;
+    padding: 2rem;
+    background-color: $bg-light;
+}
+
+.heroSection {
+    grid-column: 1 / -1;
+    position: relative;
+
+    a {
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .heroImage {
+        width: 100%;
+        height: 50vh;
+        border-radius: 10px;
+        object-fit: cover;
+    }
+
+    .heroText {
+        position: absolute;
+        bottom: 2rem;
+        left: 2rem;
+        background-color: rgba(255, 255, 255, 0.85);
+        padding: 1rem;
+        border-radius: 6px;
+        max-width: 63%;
+
+        h3 {
+            margin: 0;
+            font-size: 2rem;
+        }
+
+        p {
+            margin-top: 0.5rem;
+            font-size: 1rem;
+        }
+    }
+}
+
+.gallery {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+
+    .card {
+        background-color: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .cardImage {
+            object-fit: cover;
+            width: 100%;
+            height: auto;
+            max-height: 180px;
+        }
+
+        .cardContent {
+            padding: 1rem;
+
+            h3 {
+                margin: 0;
+                font-size: 1.2rem;
+            }
+
+            p {
+                margin-top: 0.5rem;
+                font-size: 0.9rem;
+                color: $text-muted;
+            }
+        }
+    }
+}
+
+.sidebar {
+    padding-top: 2rem;
+
+    h2 {
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+    }
+
+    ul {
+        list-style: none;
+        padding-left: 0;
+
+        li {
+            margin-bottom: 0.5rem;
+
+            a {
+                text-decoration: none;
+                color: #333;
+
+                &:hover {
+                    text-decoration: underline;
+                }
+            }
+
+            &::before {
+                content: '✨ ';
+            }
+        }
+    }
+}
+
+@media (max-width: 800px) {
+    .container {
+        grid-template-columns: 1fr;
+    }
+
+    .sidebar {
+        padding-top: 0;
+    }
+}
