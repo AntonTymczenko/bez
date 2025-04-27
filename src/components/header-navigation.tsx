@@ -32,7 +32,7 @@ export default function HeaderNavigation(props: HeaderNavigationProps) {
 
     return (
         <header
-            className={`content ${styles.headerNavigation} ${scrolled ? styles.scrolled : ''}`}
+            className={`${styles.headerNavigation} ${scrolled ? styles.scrolled : ''}`}
         >
             <div className={styles.headerSideLeft}>
                 <Link href={homeLink} className={styles.homeLink}>
