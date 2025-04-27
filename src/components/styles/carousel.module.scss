@@ -1,84 +1,16 @@
-$mainWidth: 70%;
-$mainHeight: 400px;
-$arrowSize: 32px;
-
-.carousel {
-  position: relative;
-  height: $mainHeight;
+.container {
   width: 100%;
   overflow: hidden;
+}
 
-  .track {
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 0;
-    padding: 0;
-  }
+.track {
+  display: flex;
+  width: calc(5/3 * 100%);
+  height: 400px;
+}
 
-  .slide {
-    height: 100%;
-    position: relative;
-    flex: 0 0 $mainWidth;
-    max-width: 700px;
-
-    &.active {
-      min-width: 400px;
-
-      .card {
-        position: absolute;
-        min-width: 300px;
-        max-width: 100%;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: white;
-        border-radius: 0.5rem;
-        padding: 24px 32px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        text-align: center;
-        z-index: 10;
-
-
-        .meta {
-          font-size: 0.75rem;
-          color: #999;
-        }
-      }
-    }
-
-    &.preview {
-      overflow: hidden;
-      flex: 1 0 auto;
-      opacity: 0.5;
-      pointer-events: none;
-    }
-
-  }
-
-
-  .arrow {
-    position: absolute;
-    z-index: 10;
-    width: $arrowSize;
-    height: $arrowSize;
-    background: rgba(255, 255, 255, 0.8);
-    border: none;
-    cursor: pointer;
-    border-radius: 50%;
-    user-select: none;
-    padding: 0;
-    line-height: 0;
-    top: calc(50% - $arrowSize/ 2);
-
-    &.left {
-      left: -($arrowSize/2);
-    }
-
-    &.right {
-      right: -($arrowSize/2);
-      transform: rotate(180deg);
-    }
-  }
+.item {
+  position: relative;
+  width: 20%;
+  flex-shrink: 0;
 }

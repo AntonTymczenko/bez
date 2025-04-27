@@ -1,8 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import Link from 'next/link'
-import React, { useRef, useState } from 'react'
+import { useState } from 'react'
 import styles from './styles/carousel.module.scss'
 
 type Slide = {
@@ -19,133 +18,89 @@ type CarouselProps = {
 // must match '$mainHeight' in the 'carousel.module.scss'
 const CAROUSEL_HEIGHT = '400px'
 
-function PreviewSlide({ slide }: { slide: Slide }) {
+function PreviewSlide({
+    slide,
+    priority,
+}: {
+    slide: Slide
+    priority: boolean
+}) {
     return (
-        <div className={`${styles.slide} ${styles.preview}`}>
-            <Image
-                src={slide.imageUrl}
-                alt={slide.title}
-                fill
-                sizes={`${CAROUSEL_HEIGHT}, 33vw}`}
-                style={{
-                    objectFit: 'cover',
-                    filter: 'blur(0.1rem)',
-                }}
-                priority={false}
-            />
-        </div>
+        <Image
+            src={slide.imageUrl}
+            alt={slide.title}
+            fill
+            sizes={`${CAROUSEL_HEIGHT}, 33vw}`}
+            style={{
+                objectFit: 'cover',
+                filter: 'blur(0.1rem)',
+            }}
+            priority={priority}
+        />
     )
 }
 
 export function Carousel(props: CarouselProps) {
-    const { slides } = props
-
-    const [activeIndex, setActiveIndex] = useState(0)
-    const touchStartX = useRef<number | null>(null)
-    const touchEndX = useRef<number | null>(null)
-
-    const handlePrev = () => {
-        setActiveIndex((prev) => (prev === 0 ? slides.length - 1 : prev - 1))
-    }
+    const { slides: elements } = props
+    const [shift, setShift] = useState(0)
+    const [visualShift, setVisualShift] = useState(0)
 
     const handleNext = () => {
-        setActiveIndex((prev) => (prev === slides.length - 1 ? 0 : prev + 1))
+        if (visualShift !== 0) return
+        setVisualShift(1)
     }
 
-    const handleTouchStart = (e: React.TouchEvent) => {
-        touchStartX.current = e.changedTouches[0].clientX
+    const handlePrev = () => {
+        if (visualShift !== 0) return
+        setVisualShift(-1)
     }
 
-    const handleTouchEnd = (e: React.TouchEvent) => {
-        touchEndX.current = e.changedTouches[0].clientX
-        if (touchStartX.current !== null && touchEndX.current !== null) {
-            const delta = touchStartX.current - touchEndX.current
-            if (Math.abs(delta) > 50) {
-                if (delta > 0) {
-                    handleNext()
-                } else {
-                    handlePrev()
-                }
-            }
-        }
-        touchStartX.current = null
-        touchEndX.current = null
+    const handleTransitionEnd = () => {
+        if (visualShift === 0) return
+
+        // After animation finishes, logically shift items
+        setShift(
+            (prev) => (prev + visualShift + elements.length) % elements.length
+        )
+        setVisualShift(0) // reset visual shift
     }
 
-    const prevIndex = (activeIndex - 1 + slides.length) % slides.length
-    const nextIndex = (activeIndex + 1) % slides.length
+    // return 5 items
+    const getVisibleItems = () => {
+        const size = elements.length
+
+        return [
+            elements[(shift - 1 + size) % size],
+            elements[shift % size],
+            elements[(shift + 1) % size],
+            elements[(shift + 2) % size],
+            elements[(shift + 3) % size],
+        ]
+    }
 
     return (
-        <div className={styles.carousel}>
+        <div className={styles.container}>
             <div
                 className={styles.track}
-                onTouchStart={handleTouchStart}
-                onTouchEnd={handleTouchEnd}
+                style={{
+                    transform: `translateX(calc(${visualShift * -20}% - 20%))`,
+                    transition:
+                        visualShift !== 0 ? 'transform 0.3s ease' : 'none',
+                }}
+                onTransitionEnd={handleTransitionEnd}
             >
-                {
-                    // Left Side Preview
-                    slides.length > 1 && (
-                        <PreviewSlide slide={slides[prevIndex]} />
-                    )
-                }
-
-                {/* Main slide */}
-                <div className={`${styles.slide} ${styles.active}`}>
-                    {slides.length ? (
-                        <>
-                            <Image
-                                src={slides[activeIndex].imageUrl}
-                                alt={slides[activeIndex].title}
-                                fill
-                                style={{ objectFit: 'cover' }}
-                                priority
-                            />
-                            <div className={styles.card}>
-                                <Link
-                                    href={slides[activeIndex].url}
-                                    className={styles.homeLink}
-                                >
-                                    <h2>{slides[activeIndex].title}</h2>
-                                    <div className={styles.meta}>
-                                        {slides[activeIndex].description}
-                                    </div>
-                                </Link>
-                            </div>
-                        </>
-                    ) : (
-                        <div></div>
-                    )}
-                    {slides.length > 1 && (
-                        <>
-                            <button
-                                className={`${styles.arrow} ${styles.left}`}
-                                onClick={handlePrev}
-                            >
-                                <Image
-                                    src="/images/icon-arrow.svg"
-                                    alt="Left Arrow"
-                                    width={16}
-                                    height={16}
-                                />
-                            </button>
-                            <button
-                                className={`${styles.arrow} ${styles.right}`}
-                                onClick={handleNext}
-                            >
-                                <Image
-                                    src="/images/icon-arrow.svg"
-                                    alt="Right Arrow"
-                                    width={16}
-                                    height={16}
-                                />
-                            </button>
-                        </>
-                    )}
-                </div>
-
-                {slides.length > 1 && (
-                    <PreviewSlide slide={slides[nextIndex]} />
-                )}
+                {getVisibleItems().map((item, idx) => (
+                    <div key={idx} className={styles.item}>
+                        <PreviewSlide
+                            slide={item}
+                            priority={idx !== 0 && idx !== 4}
+                        />
+                    </div>
+                ))}
+            </div>
+            <div className={styles.controls}>
+                <button onClick={handlePrev}>Previous</button>
+                <button onClick={handleNext}>Next</button>
             </div>
         </div>
     )
