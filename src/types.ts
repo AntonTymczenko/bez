@@ -12,9 +12,11 @@ export type PageContent = {
     imageId: number | null // foreign key
 }
 
-export type PageListed = Omit<PageContent, 'markdown'> & {
+export type PageListed = {
     url: string
+    heading: PageContent['heading']
     description?: string
+    imageId: NonNullable<PageContent['imageId']>
 }
 
 export type ContentType = Record<string, Record<Locale, PageContent>>
@@ -47,10 +49,4 @@ export type LoggerLevel =
 export type DatabaseOptions = {
     dbPath: string
     loggerLevel: LoggerLevel
-}
-
-export type HeaderNavigationProps = {
-    currentLocale: Locale
-    path: string
-    dbPath: string
 }

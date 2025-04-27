@@ -28,7 +28,8 @@ export function middleware(request: NextRequest) {
             '/.well-known/security.txt',
             '/.well-known/pgp-public.asc',
         ].includes(pathname) ||
-        pathname.startsWith('/img')
+        pathname.startsWith('/img') ||
+        pathname.startsWith('/images')
     ) {
         return
     }

@@ -1,10 +1,13 @@
 import Image from 'next/image'
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import HeaderNavigation from '~src/components/header-navigation'
+import GenerateMetadataFactory from '~app/generate-metadata-factory'
+import HeaderNavigationContainer from '~src/components/header-navigation-container'
 import Markdown from '~src/components/markdown'
 import { db } from '~src/db'
 import type { PageParams } from '~src/types'
+import styles from './style.module.scss'
+
+export const generateMetadata = GenerateMetadataFactory('/recipe')
 
 export default async function PageWithLocale(props: PageParams) {
     const { lang, path } = await props.params
@@ -19,25 +22,25 @@ export default async function PageWithLocale(props: PageParams) {
 
     return (
         <>
-            <HeaderNavigation
+            <HeaderNavigationContainer
                 {...{
                     path: fullPath,
                     currentLocale: lang,
                     dbPath,
                 }}
             />
-            <article className="container">
-                <h1>
-                    <Link href={fullPath}>{heading}</Link>
-                </h1>
+            <article className={styles.recipe}>
                 {imageId && (
-                    <Image
-                        src={`/img/${imageId}`}
-                        width="100"
-                        height="100"
-                        alt={heading}
-                    />
+                    <div className={styles.imageContainer}>
+                        <Image
+                            src={`/img/${imageId}`}
+                            alt={heading}
+                            layout="fill"
+                            objectFit="cover"
+                        />
+                    </div>
                 )}
+                <h1>{heading}</h1>
                 <Markdown lang={lang} markdown={markdown} />
             </article>
         </>

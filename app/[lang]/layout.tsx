@@ -1,4 +1,4 @@
-import '~app/global.css'
+import '~app/global.scss'
 
 import type { ChildrenProps, PageParamsLang } from '~src/types'
 
@@ -8,7 +8,9 @@ export default async function Root(props: ChildrenProps & PageParamsLang) {
 
     return (
         <html lang={lang}>
-            <body>{children}</body>
+            <body>
+                <div className="container">{children}</div>
+            </body>
         </html>
     )
 }

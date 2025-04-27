@@ -1,0 +1,58 @@
+@use 'app/constants' as *;
+
+.headerNavigation {
+  height: 30px;
+  background-color: $color-bg;
+  display: flex;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  transition: border-bottom 0.3s ease;
+
+  &.scrolled {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+}
+
+.headerSideLeft,
+.headerCenter,
+.headerSideRight {
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.headerSideLeft {
+  justify-content: flex-start;
+  flex: 1;
+}
+
+.headerCenter {
+  justify-content: center;
+  flex: 0;
+
+  opacity: 1;
+  transition: opacity 1s ease, visibility 1s ease;
+  visibility: visible;
+
+  &.hidden {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+.headerSideRight {
+  justify-content: flex-end;
+  flex: 1;
+}
+
+.headerTitle {
+  font-size: 14px;
+  white-space: nowrap;
+}

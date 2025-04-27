@@ -1,17 +1,23 @@
-import Link from 'next/link'
-import React from 'react'
 import Config from '~src/config'
 import { db } from '~src/db'
 import I18n from '~src/i18n'
-import { type HeaderNavigationProps, type Locale } from '~src/types'
+import type { Locale } from '~src/types'
+import HeaderNavigation from './header-navigation'
 
 type Flag = string
 type Href = string
-type LinksState = [Locale, Flag, Href]
+export type LinksState = [Locale, Flag, Href]
+type HeaderNavigationContainerProps = {
+    currentLocale: Locale
+    path: string
+    dbPath: string
+}
 
 const locales = new I18n(Config.locales).getLocalesWithFlags()
 
-export default async function LocaleSwitcher(props: HeaderNavigationProps) {
+export default async function HeaderNavigationContainer(
+    props: HeaderNavigationContainerProps
+) {
     const { currentLocale, path, dbPath } = props
 
     const pathWithLocale = (locale: Locale) => {
@@ -51,16 +57,11 @@ export default async function LocaleSwitcher(props: HeaderNavigationProps) {
     }
 
     return (
-        <div className="locale-switcher">
-            {links.map(([locale, flag, href]) => (
-                <React.Fragment key={locale}>
-                    {locale === currentLocale ? (
-                        <span>{flag}</span>
-                    ) : (
-                        <Link href={href}>{flag}</Link>
-                    )}{' '}
-                </React.Fragment>
-            ))}
-        </div>
+        <HeaderNavigation
+            {...{
+                homeLink: `/${currentLocale}/`,
+                links,
+            }}
+        />
     )
 }

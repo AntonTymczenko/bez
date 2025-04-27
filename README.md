@@ -56,10 +56,24 @@ Run `npm run build && npm start`
     - [x] support delete page/recipe feature
 - [x] Create home page layout
 - [x] Distinguish first paragraph as a recipe's description
-- [ ] DB get - change type according to the attributes
+- [-] DB get - change type according to the attributes
 - [ ] Create layout for articles
 - [ ] Create layout for recipes
-- [ ] On image import, crop and resize
+- [ ] versions bump
+    - [ ] react to 19
+    - [ ] react-dom to 19
+- [ ] page import
+    - [ ] auto replace ~ with ≈
+    - [ ] auto fix indentation when UL goes inside OL
+    - [ ] auto fix h4 or h5 to be h3
+    - [ ] meta data in raw md files
+        - [ ] Parse tags
+        - [ ] Parse YT link
+        - [ ] Parse related recipes
+    - [ ] On image import, crop and resize
+- [ ] recipe page
+    - [ ] Checklist for ingredients. Mark already added
+    - [ ] Don't turn off screen button
 - [ ] Use cache for page titles
 - [ ] Use cache for recipe descriptions
 - [ ] Use recipe descriptions as meta descriptions in the page's meta
@@ -76,3 +90,5 @@ Run `npm run build && npm start`
 - [ ] Open fullscreen image on click
 - [ ] Macros and calories calculator
 - [ ] Portion +/- calculator
+- [ ] email newsletter subscription
+- [ ] header: add links to social media

@@ -1,12 +1,12 @@
 import Image from 'next/image'
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import HeaderNavigation from '~src/components/header-navigation'
+import GenerateMetadataFactory from '~app/generate-metadata-factory'
+import HeaderNavigationContainer from '~src/components/header-navigation-container'
 import Markdown from '~src/components/markdown'
 import { db } from '~src/db'
 import type { PageContent, PageParams } from '~src/types'
 
-export { generateMetadata } from '~app/generate-metadata'
+export const generateMetadata = GenerateMetadataFactory()
 
 export default async function ArticlePageConent(
     props: PageContent & PageParams
@@ -23,7 +23,7 @@ export default async function ArticlePageConent(
 
     return (
         <>
-            <HeaderNavigation
+            <HeaderNavigationContainer
                 {...{
                     path: fullPath,
                     currentLocale: lang,
@@ -32,9 +32,7 @@ export default async function ArticlePageConent(
             />
             <div className="homepage">
                 <div className="container">
-                    <h1>
-                        <Link href={fullPath}>{heading}</Link>
-                    </h1>
+                    <h1>{heading}</h1>
                     {imageId && (
                         <Image
                             src={`/img/${imageId}`}

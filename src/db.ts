@@ -158,21 +158,25 @@ class Database extends DatabaseBase {
     ): Promise<PageListed[]> {
         const isArticle = type === 'article'
 
-        const pages = await this.get({
+        const pages = (await this.get({
             collection: 'pages',
             query: `
                 WHERE id IN (
                     SELECT MAX(id)
                     FROM pages
-                    WHERE path ${isArticle ? 'NOT ' : ''}LIKE "/recipe/%"${isArticle ? ' AND path != "/"' : ''}
-                    AND locale = "${languageCode}"
+                    WHERE locale = "${languageCode}"
+                        AND path ${isArticle ? 'NOT ' : ''}LIKE "/recipe/%"
+                        ${isArticle ? 'AND path != "/"' : ''}
+                        AND image_id IS NOT NULL
                     GROUP BY path
                 )
             `,
             limit,
             order: ['id', -1],
             attributes: ['heading', 'path', 'image_id', 'body'],
-        })
+        })) as (Omit<CollectionPage, 'image_id'> & {
+            image_id: PageListed['imageId']
+        })[]
 
         const result = pages ?? []
 

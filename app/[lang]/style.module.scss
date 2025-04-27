@@ -1,14 +1,6 @@
 $bg-light: #f9f9f9;
 $text-muted: #555;
 
-.container {
-    display: grid;
-    grid-template-columns: 3fr 1fr;
-    gap: 2rem;
-    padding: 2rem;
-    background-color: $bg-light;
-}
-
 .heroSection {
     grid-column: 1 / -1;
     position: relative;
